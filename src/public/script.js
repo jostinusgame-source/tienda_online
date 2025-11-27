@@ -1,39 +1,45 @@
-// Configuración API (Ruta relativa para Render)
+// Configuración API (Ruta relativa para que funcione en Render y Local)
 const API_URL = '/api'; 
 
-// Estado del Carrito
+// Estado del Carrito (Array para guardar productos)
 let cart = [];
 
 // --- INICIALIZACIÓN ---
+// Se ejecuta cuando la página termina de cargar
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Verificar si hay usuario logueado para ajustar el Navbar
     checkUserSession();
     
-    // Si estamos en la página principal (index.html), cargar productos
+    // 2. Si estamos en la página principal (existe el contenedor de productos), cargar el catálogo
     if (document.getElementById('products-container')) {
         loadProducts();
     }
 });
 
-// --- SESIÓN DE USUARIO ---
+// ==========================================
+// 1. GESTIÓN DE SESIÓN (AUTENTICACIÓN)
+// ==========================================
+
 function checkUserSession() {
     const userStr = localStorage.getItem('user');
     const authSection = document.getElementById('auth-section');
     
-    // Si el elemento auth-section existe (estamos en index.html)
+    // Si hay usuario guardado y el elemento del navbar existe
     if (userStr && authSection) {
         const user = JSON.parse(userStr);
-        let adminLink = user.role === 'admin' ? '<a href="admin.html" class="dropdown-item text-danger">Panel Admin</a>' : '';
+        let adminLink = user.role === 'admin' ? '<li><a href="admin.html" class="dropdown-item text-danger fw-bold">PANEL ADMIN</a></li>' : '';
         
+        // Reemplazamos el botón "LOGIN" por un menú desplegable con el nombre
         authSection.innerHTML = `
             <div class="dropdown">
-                <button class="btn btn-outline-light btn-sm rounded-0 dropdown-toggle text-uppercase" type="button" data-bs-toggle="dropdown">
-                    ${user.name}
+                <button class="btn btn-outline-light btn-sm rounded-0 dropdown-toggle text-uppercase" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa-solid fa-user me-2"></i>${user.name}
                 </button>
-                <ul class="dropdown-menu dropdown-menu-dark rounded-0 shadow">
+                <ul class="dropdown-menu dropdown-menu-dark rounded-0 shadow mt-2">
                     <li><span class="dropdown-item-text small text-muted">${user.email}</span></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li>${adminLink}</li>
-                    <li><button onclick="logout()" class="dropdown-item">Cerrar Sesión</button></li>
+                    ${adminLink}
+                    <li><button onclick="logout()" class="dropdown-item text-white"><i class="fa-solid fa-right-from-bracket me-2"></i>Cerrar Sesión</button></li>
                 </ul>
             </div>
         `;
@@ -43,132 +49,74 @@ function checkUserSession() {
 function logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    window.location.href = 'index.html'; // Redirigir al inicio o recargar
+    window.location.href = 'index.html'; // Redirigir al inicio
 }
 
-// --- REGISTRO (CON REDIRECCIÓN A VERIFICACIÓN) ---
-const registerForm = document.getElementById('register-form');
-if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const name = document.getElementById('reg-name').value;
-        const email = document.getElementById('reg-email').value;
-        const password = document.getElementById('reg-pass').value;
-        const phone = document.getElementById('reg-phone').value;
+// ==========================================
+// 2. CATÁLOGO DE PRODUCTOS
+// ==========================================
 
-        const msgDiv = document.getElementById('msg');
-        msgDiv.innerHTML = '<div class="alert alert-info">Procesando registro...</div>';
-
-        try {
-            const res = await fetch(`${API_URL}/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, phone })
-            });
-            const data = await res.json();
-            
-            if (res.ok) {
-                // Guardamos el email para que la página de verificación sepa quién es
-                localStorage.setItem('pendingEmail', email);
-                
-                msgDiv.innerHTML = `<div class="alert alert-success">¡Éxito! Redirigiendo a verificación...</div>`;
-                
-                // --- REDIRECCIÓN AUTOMÁTICA ---
-                setTimeout(() => {
-                    window.location.href = 'verify.html';
-                }, 1500);
-            } else {
-                const errorMsg = data.errors ? data.errors[0].msg : data.message;
-                msgDiv.innerHTML = `<div class="alert alert-danger">${errorMsg}</div>`;
-            }
-        } catch (error) {
-            console.error(error);
-            msgDiv.innerHTML = `<div class="alert alert-danger">Error de conexión con el servidor.</div>`;
-        }
-    });
-}
-
-// --- LOGIN ---
-const loginForm = document.getElementById('login-form');
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-pass').value;
-        const msgDiv = document.getElementById('msg');
-
-        try {
-            const res = await fetch(`${API_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            const data = await res.json();
-
-            if (res.ok) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-                window.location.href = 'index.html';
-            } else {
-                // Si la cuenta no está verificada (status 403), redirigir
-                if (res.status === 403 && data.needsVerification) {
-                    localStorage.setItem('pendingEmail', data.email);
-                    msgDiv.innerHTML = `<div class="alert alert-warning">${data.message}. Redirigiendo...</div>`;
-                    setTimeout(() => window.location.href = 'verify.html', 2000);
-                } else {
-                    msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            msgDiv.innerHTML = `<div class="alert alert-danger">Error de conexión.</div>`;
-        }
-    });
-}
-
-// --- CATÁLOGO DE PRODUCTOS ---
 async function loadProducts() {
     const container = document.getElementById('products-container');
     const loader = document.getElementById('loader');
 
     try {
         const res = await fetch(`${API_URL}/products`);
-        if (!res.ok) throw new Error('Error en la red');
+        
+        if (!res.ok) throw new Error('Error al conectar con el servidor');
         
         const products = await res.json();
         
         // Ocultar loader y mostrar contenedor
-        if(loader) loader.classList.add('d-none');
-        if(container) container.classList.remove('d-none');
+        if (loader) loader.classList.add('d-none');
+        if (container) container.classList.remove('d-none');
 
         if (products.length === 0) {
-            container.innerHTML = '<div class="col-12 text-center text-muted"><p>No hay modelos disponibles en este momento.</p></div>';
+            container.innerHTML = '<div class="col-12 text-center py-5"><p class="text-muted lead">No hay modelos disponibles por el momento.</p></div>';
             return;
         }
 
+        // Generar HTML para cada producto
         container.innerHTML = products.map(p => {
             // Imagen por defecto si no hay URL válida
             const img = p.image_url && p.image_url.length > 5 ? p.image_url : 'https://images.unsplash.com/photo-1592198084033-aade902d1aae?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
             
-            // Lógica de Stock
-            const stockMsg = p.stock > 0 ? `${p.stock} DISPONIBLES` : 'AGOTADO';
-            const btnDisabled = p.stock === 0 ? 'disabled' : '';
-            const btnText = p.stock === 0 ? 'SIN STOCK' : 'AÑADIR';
+            // Lógica de Stock (Visual)
+            let stockMsg, btnDisabled, btnText, badgeClass;
+            
+            if (p.stock > 5) {
+                stockMsg = 'DISPONIBLE';
+                badgeClass = 'bg-success text-white';
+                btnDisabled = '';
+                btnText = 'AÑADIR <i class="fa-solid fa-plus ms-1"></i>';
+            } else if (p.stock > 0) {
+                stockMsg = `¡SOLO ${p.stock}!`;
+                badgeClass = 'bg-warning text-dark';
+                btnDisabled = '';
+                btnText = 'AÑADIR';
+            } else {
+                stockMsg = 'AGOTADO';
+                badgeClass = 'bg-secondary text-white';
+                btnDisabled = 'disabled';
+                btnText = 'SIN STOCK';
+            }
 
             return `
             <div class="col-md-6 col-lg-3">
-                <div class="product-card">
+                <div class="product-card h-100">
                     <div class="card-img-wrap">
-                        <span class="badge-stock">${stockMsg}</span>
-                        <img src="${img}" alt="${p.name}">
+                        <span class="badge-stock ${badgeClass}">${stockMsg}</span>
+                        <img src="${img}" alt="${p.name}" loading="lazy">
                     </div>
-                    <div class="product-info">
+                    <div class="product-info d-flex flex-column">
                         <h3 class="product-title text-truncate" title="${p.name}">${p.name}</h3>
-                        <p class="product-price">$${parseFloat(p.price).toLocaleString()}</p>
-                        <button class="btn-add-cart" onclick="addToCart(${p.id}, '${p.name}', ${p.price})" ${btnDisabled}>
-                            ${btnText}
-                        </button>
+                        <p class="small text-muted mb-2 text-truncate">${p.description || 'Edición coleccionista'}</p>
+                        <div class="mt-auto">
+                            <p class="product-price mb-0">$${parseFloat(p.price).toLocaleString()}</p>
+                            <button class="btn-add-cart" onclick="addToCart(${p.id}, '${p.name}', ${p.price})" ${btnDisabled}>
+                                ${btnText}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -177,12 +125,16 @@ async function loadProducts() {
 
     } catch (error) {
         console.error('Error:', error);
-        if(loader) loader.innerHTML = '<p class="text-danger">Error cargando el catálogo. Intenta recargar.</p>';
+        if (loader) loader.innerHTML = '<p class="text-danger text-center">Error cargando el catálogo. Por favor intenta recargar la página.</p>';
     }
 }
 
-// --- LÓGICA DEL CARRITO ---
+// ==========================================
+// 3. CARRITO DE COMPRAS
+// ==========================================
+
 function addToCart(id, name, price) {
+    // Verificar si el producto ya está en el carrito
     const existingItem = cart.find(item => item.id === id);
     
     if (existingItem) {
@@ -192,8 +144,9 @@ function addToCart(id, name, price) {
     }
     
     updateCartUI();
-    // Feedback rápido (opcional)
-    // alert(`Añadido: ${name}`); 
+    
+    // Feedback visual simple (Toast o Alerta)
+    // alert(`Agregado: ${name}`); 
 }
 
 function removeFromCart(id) {
@@ -202,7 +155,7 @@ function removeFromCart(id) {
 }
 
 function updateCartUI() {
-    // 1. Actualizar badge del navbar
+    // A. Actualizar badge del navbar
     const countBadge = document.getElementById('cart-count');
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     
@@ -215,31 +168,37 @@ function updateCartUI() {
         }
     }
 
-    // 2. Actualizar Modal
+    // B. Actualizar Modal del Carrito
     const cartItemsContainer = document.getElementById('cart-items');
     const cartTotalElement = document.getElementById('cart-total');
     
+    // Si no existen los elementos (por ejemplo en login.html), salir
     if (!cartItemsContainer || !cartTotalElement) return;
 
     if (cart.length === 0) {
-        cartItemsContainer.innerHTML = '<p class="text-center text-muted py-3">Tu garaje está vacío.</p>';
+        cartItemsContainer.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fa-solid fa-cart-arrow-down fa-3x text-secondary mb-3"></i>
+                <p class="text-muted">Tu garaje está vacío.</p>
+            </div>`;
         cartTotalElement.textContent = '$0.00';
         return;
     }
 
     let total = 0;
+    
     cartItemsContainer.innerHTML = cart.map(item => {
         const subtotal = item.price * item.quantity;
         total += subtotal;
         return `
             <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
-                <div>
-                    <h6 class="m-0 text-white">${item.name}</h6>
-                    <small class="text-muted">$${item.price} x ${item.quantity}</small>
+                <div class="me-2">
+                    <h6 class="m-0 text-white text-truncate" style="max-width: 180px;">${item.name}</h6>
+                    <small class="text-muted">$${parseFloat(item.price).toLocaleString()} x ${item.quantity}</small>
                 </div>
                 <div class="d-flex align-items-center">
                     <span class="text-danger fw-bold me-3">$${subtotal.toLocaleString()}</span>
-                    <button onclick="removeFromCart(${item.id})" class="btn btn-sm btn-outline-secondary border-0 text-white">
+                    <button onclick="removeFromCart(${item.id})" class="btn btn-sm btn-outline-secondary border-0 text-white hover-danger" title="Eliminar">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
@@ -250,11 +209,19 @@ function updateCartUI() {
     cartTotalElement.textContent = `$${total.toLocaleString()}`;
 }
 
-// --- LOGICA DEL CHAT CON IA (ENZO) ---
+// ==========================================
+// 4. CHAT IA (ENZO CONCIERGE)
+// ==========================================
 
 function toggleChat() {
     const chatWindow = document.getElementById('ai-chat-window');
-    if(chatWindow) chatWindow.classList.toggle('d-none');
+    if (chatWindow) {
+        chatWindow.classList.toggle('d-none');
+        // Si se abre, enfocar el input
+        if (!chatWindow.classList.contains('d-none')) {
+            document.getElementById('ai-input').focus();
+        }
+    }
 }
 
 function handleEnter(e) {
@@ -263,7 +230,6 @@ function handleEnter(e) {
 
 async function sendMessage() {
     const input = document.getElementById('ai-input');
-    const messages = document.getElementById('ai-messages');
     const text = input.value.trim();
     
     if (!text) return;
@@ -272,7 +238,7 @@ async function sendMessage() {
     appendMessage(text, 'user');
     input.value = '';
 
-    // 2. Mostrar "Escribiendo..."
+    // 2. Mostrar indicador de carga
     const loadingId = appendMessage('Consultando a Maranello...', 'bot', true);
 
     try {
@@ -283,13 +249,14 @@ async function sendMessage() {
         });
         const data = await res.json();
         
-        // 3. Reemplazar loading con respuesta
+        // 3. Reemplazar carga con respuesta real
         removeMessage(loadingId);
         appendMessage(data.reply, 'bot');
 
     } catch (error) {
         removeMessage(loadingId);
-        appendMessage('El sistema de comunicaciones está ocupado. Intenta de nuevo.', 'bot');
+        appendMessage('Lo siento, el sistema de comunicaciones está ocupado. Intenta de nuevo.', 'bot');
+        console.error('Error chat:', error);
     }
 }
 
@@ -302,9 +269,14 @@ function appendMessage(text, sender, isLoading = false) {
     div.id = id;
     div.className = `ai-msg ai-msg-${sender}`;
     div.innerText = text;
-    if (isLoading) div.style.fontStyle = 'italic';
+    
+    if (isLoading) {
+        div.style.fontStyle = 'italic';
+        div.style.opacity = '0.7';
+    }
     
     messages.appendChild(div);
+    // Auto-scroll al fondo
     messages.scrollTop = messages.scrollHeight;
     return id;
 }
