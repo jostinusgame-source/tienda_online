@@ -3,152 +3,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login | SpeedCollect</title>
-    <!-- Bootstrap -->
+    <title>Acceso VIP | SpeedCollect</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;500;700&family=Russo+One&display=swap" rel="stylesheet">
+    <!-- Iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- ESTRUCTURA DE CAPAS --- */
-        body, html {
-            height: 100%;
+        body {
+            /* Fondo de alta calidad estilo Showroom */
+            background: url('https://images.unsplash.com/photo-1617788138017-80ad40651399?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
             margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-family: 'Montserrat', sans-serif;
-            overflow: hidden; /* Evita scrollbars */
-            background-color: #000;
+            overflow: hidden;
         }
 
-        /* 1. IMAGEN DE FONDO */
-        .bg-image {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: url('https://images.unsplash.com/photo-1617788138017-80ad40651399?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover;
-            z-index: 0;
-        }
-
-        /* 2. OVERLAY (OSCURO) */
         .overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7); /* Oscuridad al 70% */
-            backdrop-filter: blur(4px); /* Efecto borroso elegante */
+            position: absolute; inset: 0; 
+            background: rgba(0, 0, 0, 0.85); /* Fondo oscuro elegante */
+            backdrop-filter: blur(4px);
             z-index: 1;
         }
 
-        /* 3. CONTENEDOR CENTRADO */
-        .center-container {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            justify-content: center; /* Centrado Horizontal */
-            align-items: center;     /* Centrado Vertical */
-            z-index: 2;
-            padding: 20px;
-        }
-
-        /* TARJETA 3D */
-        .card-3d {
-            background: rgba(20, 20, 20, 0.85); /* Casi negro */
-            border: 1px solid rgba(255, 255, 255, 0.15);
+        .login-card {
+            position: relative; z-index: 10;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #D40000; /* Acento Ferrari */
             border-radius: 20px;
-            box-shadow: 0 0 50px rgba(212, 0, 0, 0.2); /* Resplandor rojo suave */
-            width: 100%;
-            max-width: 420px;
             padding: 40px;
-            text-align: center;
-            animation: float 6s ease-in-out infinite;
+            width: 100%; max-width: 450px;
+            box-shadow: 0 0 60px rgba(212, 0, 0, 0.15); /* Resplandor sutil */
+            animation: fadeInUp 0.8s ease-out;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* TIPOGRAFÍA Y INPUTS */
-        h1 { font-family: 'Russo One', sans-serif; color: white; letter-spacing: 2px; margin-bottom: 10px; }
-        .text-ferrari { color: #D40000; text-shadow: 0 0 15px rgba(212, 0, 0, 0.6); }
+        h1 {
+            font-family: 'Russo One', sans-serif;
+            color: white; text-align: center; 
+            margin-bottom: 5px; letter-spacing: 2px;
+        }
+        
+        .subtitle { color: #888; text-align: center; font-size: 0.85rem; letter-spacing: 1px; margin-bottom: 30px; text-transform: uppercase; }
+
+        .input-group-text { background: #222; border-color: #333; color: #D40000; }
         
         .form-control {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #333;
-            color: white;
-            border-radius: 50px; /* Redondeado moderno */
-            padding: 12px 20px;
-            margin-bottom: 15px;
-            text-align: center;
+            background: #111; border: 1px solid #333; color: white;
+            padding: 12px; font-size: 0.95rem;
         }
         .form-control:focus {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: #D40000;
-            box-shadow: 0 0 10px rgba(212, 0, 0, 0.3);
-            color: white;
+            background: #000; border-color: #D40000; color: white;
+            box-shadow: 0 0 10px rgba(212, 0, 0, 0.2);
         }
-        .form-control::placeholder { color: #888; font-size: 0.9rem; text-transform: uppercase; }
 
-        /* BOTÓN */
         .btn-ferrari {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(45deg, #D40000, #990000);
-            border: none;
-            border-radius: 50px;
-            color: white;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            transition: transform 0.3s, box-shadow 0.3s;
-            margin-top: 10px;
+            background: linear-gradient(45deg, #D40000, #900000);
+            border: none; color: white; width: 100%; padding: 14px;
+            font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+            border-radius: 5px; margin-top: 20px; transition: 0.3s;
         }
         .btn-ferrari:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 25px rgba(212, 0, 0, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 0, 0, 0.4);
         }
 
+        .forgot-link { color: #888; font-size: 0.85rem; text-decoration: none; transition: 0.3s; }
+        .forgot-link:hover { color: #D40000; }
+
         .back-link {
-            position: absolute; top: 30px; left: 30px;
+            position: absolute; top: 30px; left: 30px; z-index: 20;
             color: rgba(255,255,255,0.6); text-decoration: none;
-            font-size: 0.8rem; letter-spacing: 1px; z-index: 3;
-            font-weight: bold; display: flex; align-items: center;
+            font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;
         }
-        .back-link:hover { color: #D40000; }
+        .back-link:hover { color: white; }
     </style>
 </head>
 <body>
 
-    <!-- CAPAS VISUALES -->
-    <div class="bg-image"></div>
     <div class="overlay"></div>
     
     <a href="index.html" class="back-link">
-        ← VOLVER AL SHOWROOM
+        <i class="fa-solid fa-arrow-left"></i> Volver al Catálogo
     </a>
 
-    <div class="center-container">
-        <div class="card-3d">
-            <h1>SPEED<span class="text-ferrari">COLLECT</span></h1>
-            <p class="text-secondary small mb-4 text-uppercase fw-bold">Acceso Exclusivo</p>
-            
-            <form id="login-form">
-                <input type="email" id="login-email" class="form-control" placeholder="Email" required>
-                <input type="password" id="login-pass" class="form-control" placeholder="Contraseña" required>
-                
-                <div class="text-end mb-4">
-                    <a href="#" class="text-secondary small text-decoration-none">¿Olvidaste tu llave?</a>
+    <div class="login-card">
+        <h1>SPEED<span style="color:#D40000">COLLECT</span></h1>
+        <p class="subtitle">Acceso Exclusivo Socios</p>
+        
+        <form id="login-form">
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                    <input type="email" id="login-email" class="form-control" placeholder="Correo Electrónico" required>
                 </div>
-
-                <button type="submit" class="btn-ferrari">ENCENDER MOTOR</button>
-            </form>
-
-            <div id="msg" class="mt-3"></div>
-
-            <div class="mt-4 pt-3 border-top border-secondary">
-                <span class="text-secondary small">¿Nuevo piloto?</span>
-                <a href="register.html" class="text-white small fw-bold ms-2 text-decoration-none">Solicitar Membresía</a>
             </div>
+            
+            <div class="mb-3">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" id="login-pass" class="form-control" placeholder="Contraseña Maestra" required>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <a href="#" class="forgot-link" id="forgot-link">¿Olvidaste tu llave?</a>
+            </div>
+
+            <button type="submit" class="btn-ferrari">ENCENDER MOTOR</button>
+        </form>
+
+        <div id="msg" class="mt-3 text-center small text-white"></div>
+
+        <div class="text-center mt-4 pt-3 border-top border-secondary">
+            <span class="text-muted small">¿Nuevo piloto?</span>
+            <a href="register.html" class="text-white fw-bold text-decoration-none ms-2">Solicitar Membresía</a>
         </div>
     </div>
 
+    <!-- Script de conexión -->
     <script src="script.js"></script>
 </body>
 </html>
