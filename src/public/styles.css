@@ -1,34 +1,30 @@
-body { background: #000; font-family: 'Montserrat', sans-serif; color: white; }
-.text-gray { color: #aaa; }
-.ls-2 { letter-spacing: 2px; }
-
-/* Navbar */
-.brand-title { font-weight: 800; font-size: 1.2rem; }
-.brand-subtitle { font-size: 0.7rem; color: #888; letter-spacing: 1px; }
-
-/* Hero */
-.hero-img { max-width: 90%; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5)); transition: 0.5s; }
-.hero-img:hover { transform: scale(1.05); }
-.overlay-gradient { position: absolute; inset: 0; background: linear-gradient(90deg, #000 0%, transparent 50%); }
-
-/* Products */
-.product-card { transition: 0.3s; }
-.product-card:hover { border-color: #D40000 !important; transform: translateY(-5px); }
-.card-img-wrap { position: relative; background: white; border-radius: 5px; overflow: hidden; }
-.overlay-3d { 
-    position: absolute; inset: 0; background: rgba(0,0,0,0.6); 
-    display: flex; align-items: center; justify-content: center; 
-    opacity: 0; transition: 0.3s; 
+/* --- PALETA FERRARI --- */
+:root {
+    --ferrari-red: #D40000;
+    --dark-bg: #0a0a0a;
+    --text-white: #ffffff;
+    --text-gray: #888888;
 }
-.card-img-wrap:hover .overlay-3d { opacity: 1; }
 
-/* Buttons */
-.btn-ferrari {
-    background: #D40000; color: white; border: none; padding: 10px 25px;
-    font-weight: bold; letter-spacing: 1px; transition: 0.3s;
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--dark-bg);
+    color: var(--text-white);
+    margin: 0;
 }
-.btn-ferrari:hover { background: #990000; color: white; box-shadow: 0 0 15px #D40000; }
 
-/* Modal Pagos */
-.nav-tabs .nav-link.active { background: #D40000; color: white; border: none; }
-.nav-tabs .nav-link { color: #888; }
+/* Tipografía de Títulos */
+h1, h2, h3, .brand-font {
+    font-family: 'Russo One', sans-serif;
+    text-transform: uppercase;
+}
+
+/* Utilidades de texto */
+.text-ferrari { color: var(--ferrari-red) !important; }
+.hover-red:hover { color: var(--ferrari-red) !important; transition: 0.3s; }
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ferrari-red); }

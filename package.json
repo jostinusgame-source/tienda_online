@@ -1,7 +1,7 @@
 {
   "name": "tienda-speedcollect",
   "version": "1.0.0",
-  "description": "Backend Oficial",
+  "description": "Backend Oficial SpeedCollect",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

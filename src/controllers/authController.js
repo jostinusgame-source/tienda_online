@@ -15,18 +15,17 @@ exports.register = async (req, res) => {
         if (userExists) return res.status(400).json({ message: 'El correo ya está registrado.' });
 
         const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
         const code = generateCode();
         const exp = new Date(Date.now() + 15 * 60000); // 15 min
 
         await User.create({
-            name, email, phone, password: hash,
+            name, email, phone, password: hashedPassword,
             email_verification_code: code,
             email_verification_expiration: exp
         });
 
-        // ⚡ TRUCO DE VELOCIDAD: No usamos 'await' aquí.
-        // El servidor responde al usuario DE INMEDIATO y envía el correo en segundo plano.
+        // ⚡ ENVIAR CORREO EN SEGUNDO PLANO (NO AWAIT)
         emailService.sendVerificationCode(email, code)
             .catch(err => console.error("Error enviando correo (Background):", err));
 
@@ -38,6 +37,7 @@ exports.register = async (req, res) => {
     }
 };
 
+// LOGIN
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -63,13 +63,13 @@ exports.login = async (req, res) => {
     }
 };
 
+// VERIFICAR EMAIL
 exports.verifyEmail = async (req, res) => {
     try {
         const { email, code } = req.body;
         const user = await User.findByEmail(email);
         if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
         
-        // Convertir a string para evitar errores de tipo
         if (String(user.email_verification_code) !== String(code)) {
             return res.status(400).json({ message: 'Código incorrecto.' });
         }
@@ -79,13 +79,12 @@ exports.verifyEmail = async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Error verificando.' }); }
 };
 
-// RECUPERACIÓN DE CONTRASEÑA (Lógica Real)
+// RECUPERACIÓN DE CONTRASEÑA (AHORA SÍ FUNCIONA)
 exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
         const user = await User.findByEmail(email);
         
-        // Por seguridad, no decimos si el correo no existe, pero internamente paramos
         if (!user) return res.status(404).json({ message: 'Si el correo existe, recibirás un código.' });
 
         const recoveryCode = generateCode();
@@ -93,7 +92,8 @@ exports.forgotPassword = async (req, res) => {
         // Guardamos el código en la base de datos
         await db.execute('UPDATE users SET recovery_code = ? WHERE email = ?', [recoveryCode, email]);
 
-        // Enviar correo
+        // Enviar correo de recuperación
+        // Reutilizamos la función de envío de código para simplificar
         emailService.sendVerificationCode(email, recoveryCode)
             .catch(e => console.error("Error correo recuperación:", e));
 
