@@ -1,14 +1,15 @@
 const Product = require('../models/Product');
 
-// Definimos las funciones primero
 const getAllProducts = async (req, res) => {
     try {
         const products = await Product.findAll();
-        // Si no hay productos, devolvemos array vacío pero NO error
+        // Si no hay productos, devolvemos array vacío para que el frontend no falle
         res.json(products || []);
     } catch (error) {
-        console.error("Error en getAllProducts:", error);
-        res.status(500).json({ message: 'Error al obtener el catálogo' });
+        console.error("Error obteniendo productos:", error);
+        // IMPORTANTE: Devolvemos un array vacío (200 OK) en lugar de error 500
+        // para que la página cargue aunque la BD falle.
+        res.status(200).json([]);
     }
 };
 
@@ -18,7 +19,7 @@ const getProductById = async (req, res) => {
         if (!product) return res.status(404).json({ message: 'Auto no encontrado' });
         res.json(product);
     } catch (error) {
-        res.status(500).json({ message: 'Error buscando el auto' });
+        res.status(500).json({ message: 'Error buscando auto' });
     }
 };
 
@@ -27,7 +28,7 @@ const createProduct = async (req, res) => {
         const id = await Product.create(req.body);
         res.status(201).json({ message: 'Producto creado', id });
     } catch (error) {
-        res.status(500).json({ message: 'Error creando producto' });
+        res.status(500).json({ message: 'Error creando' });
     }
 };
 
@@ -49,7 +50,6 @@ const deleteProduct = async (req, res) => {
     }
 };
 
-// Exportación como objeto único (Más seguro contra errores)
 module.exports = {
     getAllProducts,
     getProductById,
