@@ -1,38 +1,19 @@
-const mysql = require('mysql2/promise');
-require('dotenv').config({ path: '../.env' }); // Busca el .env en la carpeta anterior
+node src/updateDB.js
 
-async function updateDatabase() {
-    console.log('🔌 Conectando a la base de datos en la nube...');
-    
-    const connection = await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: process.env.DB_PORT
-    });
+---
 
-    console.log('✅ Conexión exitosa.');
+### 🧐 Sobre tu pregunta de la "M" y la "U"
 
-    try {
-        // 1. Agregar columna de teléfono si no existe
-        console.log('📱 Agregando columna de teléfono...');
-        await connection.query(`
-            ALTER TABLE users 
-            ADD COLUMN phone VARCHAR(20) NULL AFTER email;
-        `);
-        console.log('✅ Columna "phone" agregada correctamente.');
+En la imagen que me mostraste, ves letras al lado de los archivos (`M` y `U`). **¡No son errores!** Son avisos de Git (tu control de versiones):
 
-    } catch (error) {
-        if (error.code === 'ER_DUP_FIELDNAME') {
-            console.log('⚠️ La columna "phone" ya existía. No se hicieron cambios.');
-        } else {
-            console.error('❌ Error actualizando tabla:', error);
-        }
-    } finally {
-        await connection.end();
-        console.log('👋 Conexión cerrada.');
-    }
-}
+* **M (Modified):** Significa que **modificaste** ese archivo (lo editamos recién) y esos cambios aún no se han guardado en un "commit" de Git. Es normal ver esto mientras trabajas.
+* **U (Untracked):** Significa que es un archivo **nuevo** (como `updateDB.js`) que Git nunca había visto antes.
 
-updateDatabase();
+**¿Es malo?** No, para nada. Solo significa que tienes trabajo pendiente por subir a la nube.
+
+Una vez ejecutes el script `updateDB.js` y veas que funcionó (mensaje verde ✅), deberás ejecutar estos comandos para que esas letras desaparezcan y tus cambios se guarden en GitHub:
+
+```powershell
+git add .
+git commit -m "Actualizando base de datos y validaciones"
+git push
