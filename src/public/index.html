@@ -3,47 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpeedCollect | Official Dealer</title>
-    <!-- Bootstrap 5 -->
+    <title>SpeedCollect | Luxury Garage</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Iconos FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Fuente Montserrat (Estilo Ferrari) -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <!-- Estilos Propios -->
     <link rel="stylesheet" href="styles.css">
-    <!-- Visor 3D de Google -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js"></script>
 </head>
 <body>
 
-    <!-- Navbar Minimalista Negro -->
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-black py-3 fixed-top">
         <div class="container-fluid px-5">
             <a class="navbar-brand d-flex flex-column" href="#">
-                <span class="brand-title">OFFICIAL</span>
-                <span class="brand-subtitle">SPEEDCOLLECT DEALER</span>
+                <span class="brand-title">SPEED<span class="text-danger">COLLECT</span></span>
+                <span class="brand-subtitle">OFFICIAL DEALER</span>
             </a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav align-items-center gap-4 text-uppercase text-small">
-                    <li class="nav-item"><a class="nav-link" href="#hero">Coches Nuevos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#catalogo">Colección</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#about">Sobre Nosotros</a></li>
-                    
-                    <!-- Carrito -->
+                    <li class="nav-item"><a class="nav-link" href="#hero">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#catalogo">Catálogo</a></li>
                     <li class="nav-item ms-3">
                         <a href="#" class="nav-link position-relative" data-bs-toggle="modal" data-bs-target="#cartModal">
-                            <i class="fa-solid fa-bag-shopping fa-lg"></i>
+                            <i class="fa-solid fa-cart-shopping fa-lg"></i>
                             <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display: none;">0</span>
                         </a>
                     </li>
-                    
-                    <!-- Usuario / Login -->
                     <li class="nav-item" id="auth-section">
                         <a href="login.html" class="btn btn-outline-light btn-sm rounded-0 px-3 ms-3">LOGIN</a>
                     </li>
@@ -52,131 +40,140 @@
         </div>
     </nav>
 
-    <!-- Hero Section (Portada Dividida) -->
+    <!-- Hero -->
     <header id="hero" class="d-flex align-items-center bg-black" style="height: 100vh; padding-top: 80px;">
         <div class="container-fluid h-100">
             <div class="row h-100">
-                <!-- Izquierda: Texto -->
-                <div class="col-lg-5 d-flex flex-column justify-content-center px-5 text-white">
-                    <h5 class="text-uppercase ls-2 text-secondary mb-3">Exclusividad 1:18</h5>
-                    <h1 class="display-3 fw-bold text-uppercase mb-4">Ferrari<br>Store</h1>
-                    <p class="lead fw-light mb-5 text-gray">
-                        La ingeniería de Maranello en tu escritorio. <br>
-                        Modelos certificados con acabado de museo.
-                    </p>
-                    <div>
-                        <a href="#catalogo" class="btn-ferrari">
-                            DESCUBRIR MÁS <i class="fa-solid fa-chevron-right ms-2 p-1 border rounded-circle"></i>
-                        </a>
-                    </div>
+                <div class="col-lg-5 d-flex flex-column justify-content-center px-5 text-white z-index-2">
+                    <h5 class="text-uppercase ls-2 text-secondary mb-3">Colección 2025</h5>
+                    <h1 class="display-3 fw-bold text-uppercase mb-4">Ingeniería<br><span class="text-danger">Italiana</span></h1>
+                    <p class="lead fw-light mb-5 text-gray">Detalle extremo. Escala 1:18. La pasión del motor en tu hogar.</p>
+                    <a href="#catalogo" class="btn btn-ferrari w-50">VER GARAJE</a>
                 </div>
-                
-                <!-- Derecha: Imagen Vitrina -->
-                <div class="col-lg-7 h-100 px-0 position-relative bg-light-gray d-flex align-items-center justify-content-center overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Ferrari Vitrina" class="img-fluid hero-img">
+                <div class="col-lg-7 h-100 px-0 position-relative bg-dark overflow-hidden">
+                    <div class="overlay-gradient"></div>
+                    <img src="https://images.unsplash.com/photo-1544636331-e26879cd4d9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="img-fluid hero-img">
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Showroom 3D -->
-    <section class="bg-black py-5 text-white">
-        <div class="container text-center mb-5">
-            <h2 class="text-uppercase fw-bold">Visualizador 3D</h2>
-            <div class="divider-red mx-auto"></div>
-        </div>
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    <div class="model-viewer-container border border-secondary rounded-0">
-                         <!-- Modelo 3D (Astronauta por defecto, cambiar por URL de auto .glb) -->
-                         <model-viewer 
-                            src="https://modelviewer.dev/shared-assets/models/Astronaut.glb" 
-                            poster="https://images.unsplash.com/photo-1617788138017-80ad40651399?ixlib=rb-4.0.3&w=1200&q=80"
-                            alt="Modelo 3D" 
-                            auto-rotate 
-                            camera-controls 
-                            shadow-intensity="1"
-                            style="width: 100%; height: 500px; background-color: #111;">
-                        </model-viewer>
-                    </div>
-                    <p class="text-center mt-3 text-secondary text-uppercase small">Arrastra para rotar • Scroll para zoom</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Catálogo Grid -->
+    <!-- Catálogo -->
     <section id="catalogo" class="py-5 bg-black text-white">
-        <div class="container-fluid px-5">
+        <div class="container px-5">
             <div class="d-flex justify-content-between align-items-end mb-5">
-                <h2 class="text-uppercase fw-bold m-0">Modelos Disponibles</h2>
-                <div class="filters text-uppercase text-small d-none d-md-block">
-                    <a href="#" class="text-white text-decoration-none me-4 fw-bold border-bottom border-danger border-2">Todos</a>
-                    <a href="#" class="text-secondary text-decoration-none me-4">Limitados</a>
-                    <a href="#" class="text-secondary text-decoration-none">Pista</a>
-                </div>
+                <h2 class="text-uppercase fw-bold m-0">Showroom</h2>
+                <div class="divider-red"></div>
             </div>
-
-            <!-- Loader -->
+            
             <div id="loader" class="text-center py-5">
                 <div class="spinner-border text-danger" role="status"></div>
-                <p class="mt-2 text-uppercase small">Cargando colección...</p>
+                <p class="mt-2 text-uppercase small">Cargando motores...</p>
             </div>
 
-            <!-- Grid de Productos (JS llena esto) -->
             <div id="products-container" class="row g-4 d-none"></div>
         </div>
     </section>
 
-    <!-- Footer Simple -->
-    <footer class="bg-black text-secondary py-5 border-top border-dark">
-        <div class="container text-center">
-            <p class="text-uppercase small ls-2 mb-0">© 2025 SpeedCollect Official Dealer</p>
-        </div>
-    </footer>
-
     <!-- Modal Carrito -->
     <div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark text-white rounded-0 border border-secondary">
+            <div class="modal-content bg-dark text-white border-secondary">
                 <div class="modal-header border-bottom border-secondary">
-                    <h5 class="modal-title text-uppercase fw-bold">Tu Garaje</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <h5 class="modal-title">TU GARAJE</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="cart-items">
-                    <p class="text-center text-muted">Tu carrito está vacío.</p>
+                    <p class="text-center text-muted">No has seleccionado autos.</p>
                 </div>
                 <div class="modal-footer border-top border-secondary justify-content-between">
-                    <h5 class="m-0">Total: <span id="cart-total" class="text-danger">$0.00</span></h5>
-                    <button class="btn btn-ferrari btn-sm">FINALIZAR COMPRA</button>
+                    <h5>Total: <span id="cart-total" class="text-danger">$0.00</span></h5>
+                    <button class="btn btn-ferrari btn-sm" onclick="openPaymentModal()">PAGAR AHORA</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- WIDGET DE CHAT IA "ENZO" -->
-    <button id="ai-toggle-btn" class="btn-ai-float" onclick="toggleChat()">
-        <i class="fa-solid fa-comments"></i>
-    </button>
+    <!-- Modal Pago Real -->
+    <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-black text-white border border-danger">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">FINALIZAR COMPRA</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs border-secondary mb-3" id="paymentTabs">
+                        <li class="nav-item"><a class="nav-link active text-white" data-bs-toggle="tab" href="#card">Tarjeta</a></li>
+                        <li class="nav-item"><a class="nav-link text-white" data-bs-toggle="tab" href="#nequi">Nequi / PSE</a></li>
+                    </ul>
 
-    <div id="ai-chat-window" class="ai-chat-container d-none">
-        <div class="ai-header">
-            <span><i class="fa-solid fa-robot"></i> Enzo Concierge</span>
-            <button onclick="toggleChat()" class="btn btn-sm text-white"><i class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div id="ai-messages" class="ai-body">
-            <div class="ai-msg ai-msg-bot">
-                Bienvenido a SpeedCollect. Soy Enzo, tu consultor personal. ¿Buscas algún modelo en especial para tu colección? 🏎️
+                    <div class="tab-content">
+                        <!-- Tarjeta -->
+                        <div class="tab-pane fade show active" id="card">
+                            <form id="card-form">
+                                <div class="mb-3">
+                                    <label class="small text-muted">Número de Tarjeta</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-dark border-secondary text-white"><i class="fa-regular fa-credit-card"></i></span>
+                                        <input type="text" id="cc-number" class="form-control bg-dark text-white border-secondary" placeholder="0000 0000 0000 0000" maxlength="19">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6 mb-3">
+                                        <label class="small text-muted">Expira</label>
+                                        <input type="text" id="cc-exp" class="form-control bg-dark text-white border-secondary" placeholder="MM/YY" maxlength="5">
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <label class="small text-muted">CVV</label>
+                                        <input type="password" id="cc-cvv" class="form-control bg-dark text-white border-secondary" placeholder="123" maxlength="3">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100 fw-bold">PAGAR SEGURO</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Nequi -->
+                        <div class="tab-pane fade" id="nequi">
+                            <form id="nequi-form">
+                                <div class="text-center mb-3">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c8/Nequi_Logo.png" height="50" style="background:white; padding:5px; border-radius:50%;">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="small text-muted">Celular Nequi</label>
+                                    <input type="tel" id="nequi-phone" class="form-control bg-dark text-white border-secondary" placeholder="300 123 4567">
+                                </div>
+                                <button type="submit" class="btn btn-ferrari w-100 fw-bold">ENVIAR NOTIFICACIÓN</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="ai-footer">
-            <input type="text" id="ai-input" placeholder="Pregunta sobre autos..." onkeypress="handleEnter(event)">
-            <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Modal 3D View -->
+    <div class="modal fade" id="view3DModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-black border-secondary">
+                <div class="modal-body p-0 position-relative">
+                    <button type="button" class="btn-close btn-close-white position-absolute top-0 end-0 m-3 z-index-2" data-bs-dismiss="modal"></button>
+                    <model-viewer 
+                        id="modal-viewer-3d"
+                        src="" 
+                        alt="Modelo 3D" 
+                        auto-rotate 
+                        camera-controls 
+                        shadow-intensity="1"
+                        style="width: 100%; height: 500px; background-color: #111;">
+                    </model-viewer>
+                    <div class="text-center py-2 text-muted small">Arrastra para girar 360°</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>
 </body>

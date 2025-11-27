@@ -1,57 +1,59 @@
 const Product = require('../models/Product');
 
-// 1. Obtener todos los productos
-exports.getAllProducts = async (req, res) => {
+// Definimos las funciones primero
+const getAllProducts = async (req, res) => {
     try {
         const products = await Product.findAll();
-        res.json(products);
+        // Si no hay productos, devolvemos array vacío pero NO error
+        res.json(products || []);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al obtener productos' });
+        console.error("Error en getAllProducts:", error);
+        res.status(500).json({ message: 'Error al obtener el catálogo' });
     }
 };
 
-// 2. Obtener un producto por ID
-exports.getProductById = async (req, res) => {
+const getProductById = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
-        if (!product) return res.status(404).json({ message: 'Producto no encontrado' });
+        if (!product) return res.status(404).json({ message: 'Auto no encontrado' });
         res.json(product);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al obtener producto' });
+        res.status(500).json({ message: 'Error buscando el auto' });
     }
 };
 
-// 3. Crear producto (Admin)
-exports.createProduct = async (req, res) => {
+const createProduct = async (req, res) => {
     try {
         const id = await Product.create(req.body);
         res.status(201).json({ message: 'Producto creado', id });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al crear producto' });
+        res.status(500).json({ message: 'Error creando producto' });
     }
 };
 
-// 4. Actualizar producto (Admin)
-exports.updateProduct = async (req, res) => {
+const updateProduct = async (req, res) => {
     try {
         await Product.update(req.params.id, req.body);
-        res.json({ message: 'Producto actualizado' });
+        res.json({ message: 'Actualizado' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al actualizar' });
+        res.status(500).json({ message: 'Error actualizando' });
     }
 };
 
-// 5. Eliminar producto (Admin)
-exports.deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res) => {
     try {
         await Product.delete(req.params.id);
-        res.json({ message: 'Producto eliminado' });
+        res.json({ message: 'Eliminado' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al eliminar' });
+        res.status(500).json({ message: 'Error eliminando' });
     }
+};
+
+// Exportación como objeto único (Más seguro contra errores)
+module.exports = {
+    getAllProducts,
+    getProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct
 };
