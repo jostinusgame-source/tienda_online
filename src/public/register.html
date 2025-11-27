@@ -1,56 +1,54 @@
-<div class="mb-3">
-    <label>Teléfono (Con código de país, ej: +573001234567)</label>
-    <input type="tel" id="reg-phone" class="form-control" placeholder="+57..." required>
-    <small class="text-muted">Solo números, empieza con +</small>
-</div>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Tienda Online</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card p-4 shadow">
+                    <h3 class="text-center mb-4">Crear Cuenta</h3>
+                    <form id="register-form">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre Completo</label>
+                            <input type="text" id="reg-name" class="form-control" placeholder="Ej: Juan Perez" required>
+                            <small class="text-muted">Mínimo 2 palabras, sin números.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="reg-email" class="form-control" placeholder="nombre@correo.com" required>
+                        </div>
 
-**En `src/public/script.js`:** (Actualiza el evento del registro):
+                        <!-- NUEVO CAMPO DE TELÉFONO -->
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono (Con código de país)</label>
+                            <input type="tel" id="reg-phone" class="form-control" placeholder="+573001234567" required>
+                            <small class="text-muted">Debe iniciar con + seguido del código de país.</small>
+                        </div>
 
-```javascript
-// --- REGISTRO ---
-const registerForm = document.getElementById('register-form');
-if (registerForm) {
-    registerForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('reg-name').value;
-        const email = document.getElementById('reg-email').value;
-        const password = document.getElementById('reg-pass').value;
-        const phone = document.getElementById('reg-phone').value; // <--- NUEVO
+                        <div class="mb-3">
+                            <label class="form-label">Contraseña</label>
+                            <input type="password" id="reg-pass" class="form-control" required>
+                            <small class="text-muted">Mín. 8 caracteres, 1 Mayúscula, 1 número, 1 símbolo.</small>
+                        </div>
 
-        try {
-            const res = await fetch(`${API_URL}/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password, phone }) // <--- NUEVO
-            });
-            const data = await res.json();
-            
-            if (res.ok) {
-                // ... (resto del código de éxito igual)
-                document.getElementById('msg').innerHTML = `<div class="alert alert-success">${data.message}</div>`;
-            } else {
-                const errorMsg = data.errors ? data.errors[0].msg : data.message;
-                document.getElementById('msg').innerHTML = `<div class="alert alert-danger">${errorMsg}</div>`;
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    });
-}
-
----
-
-### 🚀 PASO FINAL: Subir cambios a Render
-
-Una vez hayas hecho:
-1.  Ejecutado `node src/updateDB.js` (y haya salido bien).
-2.  Modificado los archivos (`validations.js`, `User.js`, `authController.js`, `register.html`, `script.js`).
-
-Sube todo a GitHub para que Render se actualice:
-
-```powershell
-git add .
-git commit -m "Agregando telefono y mejorando validaciones"
-git push
-
-¡Espera unos minutos a que Render haga el despliegue automático y tendrás tu tienda actualizada con las nuevas reglas!
+                        <button type="submit" class="btn btn-success w-100">Registrarse</button>
+                    </form>
+                    
+                    <div id="msg" class="mt-3"></div>
+                    
+                    <p class="mt-3 text-center">
+                        <a href="login.html">¿Ya tienes cuenta? Ingresa aquí</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

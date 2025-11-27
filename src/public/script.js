@@ -1,3 +1,5 @@
+// IMPORTANTE: Si estás en local usa http://localhost:3000/api
+// Si subes a Render, usa /api (ruta relativa)
 const API_URL = '/api';
 
 // --- UTILIDADES ---
@@ -37,26 +39,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// --- REGISTRO ---
+// --- REGISTRO (ACTUALIZADO CON TELÉFONO) ---
 const registerForm = document.getElementById('register-form');
 if (registerForm) {
     registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Obtenemos los valores limpios
         const name = document.getElementById('reg-name').value;
         const email = document.getElementById('reg-email').value;
         const password = document.getElementById('reg-pass').value;
+        const phone = document.getElementById('reg-phone').value; // <--- DATO NUEVO
+
+        document.getElementById('msg').innerHTML = '<div class="alert alert-info">Procesando...</div>';
 
         try {
             const res = await fetch(`${API_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, phone }) // Enviamos el teléfono
             });
             const data = await res.json();
             
             if (res.ok) {
-                document.getElementById('msg').innerHTML = `<div class="alert alert-success">Registro exitoso. Redirigiendo...</div>`;
-                setTimeout(() => window.location.href = 'login.html', 2000);
+                document.getElementById('msg').innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+                setTimeout(() => window.location.href = 'login.html', 3000);
             } else {
                 // Mostrar errores del backend
                 const errorMsg = data.errors ? data.errors[0].msg : data.message;
@@ -64,6 +71,7 @@ if (registerForm) {
             }
         } catch (error) {
             console.error(error);
+            document.getElementById('msg').innerHTML = `<div class="alert alert-danger">Error de conexión</div>`;
         }
     });
 }
