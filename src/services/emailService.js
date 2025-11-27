@@ -1,78 +1,66 @@
 const nodemailer = require('nodemailer');
-const dns = require('dns').promises;
 require('dotenv').config();
 
-// 1. Configuración ROBUSTA para Gmail (Puerto 465 SSL)
-// Esto evita el error ETIMEDOUT en Render
+// CONFIGURACIÓN ROBUSTA (PUERTO 465 - SSL)
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // Usar SSL
+    host: "smtp.gmail.com",
+    port: 465, // Puerto Seguro (Evita bloqueos de Render)
+    secure: true, // TRUE para puerto 465
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS // Asegúrate que sea la App Password sin espacios
+        pass: process.env.EMAIL_PASS // Tu contraseña de aplicación de 16 letras
     },
-    tls: {
-        rejectUnauthorized: false // Ayuda a evitar errores de certificados en la nube
-    },
-    connectionTimeout: 10000 // 10 segundos máximo para conectar
+    // Aumentamos los tiempos de espera para evitar el error ETIMEDOUT
+    connectionTimeout: 10000, // 10 segundos
+    greetingTimeout: 10000,
+    socketTimeout: 15000
 });
 
-// 2. Validar DNS (Para evitar correos a dominios falsos)
-const verificarDominioReal = async (email) => {
-    const dominio = email.split('@')[1];
-    try {
-        const mxRecords = await dns.resolveMx(dominio);
-        return mxRecords && mxRecords.length > 0;
-    } catch (error) {
-        console.warn(`⚠️ Advertencia: No se pudo verificar DNS para ${dominio}, intentando enviar igual...`);
-        return true; // En caso de fallo de DNS local, permitimos intentar el envío
+// Verificación de conexión al iniciar (Para debug)
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log("❌ Error conectando al servidor de correos:", error.message);
+    } else {
+        console.log("✅ Servidor de correos listo y conectado.");
     }
-};
+});
 
-// 3. Enviar Código de Verificación
 const sendVerificationCode = async (email, code) => {
-    console.log(`📨 Intentando enviar correo a: ${email}...`);
+    console.log(`📨 Enviando código a: ${email}...`);
     
-    // Validación de dominio (Opcional si falla mucho el DNS)
-    const dominioValido = await verificarDominioReal(email);
-    if (!dominioValido) {
-        throw new Error("El dominio del correo no parece real.");
-    }
-
-    const html = `
-    <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; background-color: #1a1a1a; color: white; padding: 20px; border-radius: 10px; border: 1px solid #d90429;">
-        <div style="text-align: center; border-bottom: 1px solid #333; padding-bottom: 20px;">
-            <h1 style="color: #d90429; margin: 0; text-transform: uppercase; font-style: italic;">SpeedCollect</h1>
-            <p style="color: #999; margin-top: 5px;">Official Dealer</p>
+    const htmlContent = `
+    <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #d90429; padding: 20px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">SPEEDCOLLECT</h1>
         </div>
-        <div style="padding: 30px; text-align: center;">
-            <h2 style="color: white;">Verificación de Piloto</h2>
-            <p style="color: #ccc; font-size: 16px;">Usa este código para encender motores y acceder a tu garaje:</p>
-            
+        <div style="padding: 30px; text-align: center; color: #333333;">
+            <h2 style="margin-top: 0;">Verifica tu Cuenta</h2>
+            <p>Estás a un paso de acceder al garaje más exclusivo. Usa este código:</p>
             <div style="margin: 30px 0;">
-                <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #fff; background: #d90429; padding: 15px 30px; border-radius: 5px; box-shadow: 0 0 15px #d90429;">
+                <span style="display: inline-block; background-color: #f8f9fa; color: #d90429; padding: 15px 30px; font-size: 32px; font-weight: bold; letter-spacing: 5px; border-radius: 5px; border: 2px dashed #d90429;">
                     ${code}
                 </span>
             </div>
-            
-            <p style="font-size: 12px; color: #666;">Este código expira en 10 minutos. Si no fuiste tú, ignora este mensaje.</p>
+            <p style="font-size: 14px; color: #666;">Este código expira en 10 minutos.</p>
+        </div>
+        <div style="background-color: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #999;">
+            &copy; 2025 SpeedCollect Inc. Todos los derechos reservados.
         </div>
     </div>
     `;
 
     try {
         const info = await transporter.sendMail({
-            from: `"SpeedCollect Security" <${process.env.EMAIL_USER}>`,
+            from: `"SpeedCollect Admin" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: `🔐 Tu código de acceso: ${code}`,
-            html: html
+            subject: `🚀 Tu Código de Acceso: ${code}`,
+            html: htmlContent
         });
-        console.log(`✅ Correo enviado con éxito. ID: ${info.messageId}`);
+        console.log('✅ Correo enviado ID:', info.messageId);
         return true;
     } catch (error) {
-        console.error("❌ ERROR CRÍTICO AL ENVIAR EMAIL:", error);
-        // Lanzamos el error para que el Frontend lo sepa
+        console.error("❌ ERROR FINAL EN EMAIL SERVICE:", error);
+        // Lanzamos un error limpio para que el controlador lo entienda
         throw new Error(`Fallo SMTP: ${error.message}`);
     }
 };
