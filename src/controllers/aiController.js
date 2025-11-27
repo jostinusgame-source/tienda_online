@@ -1,8 +1,8 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
-// Inicializar Gemini
-// Si no hay key, no crasheamos la app, solo el chat fallará elegantemente
+// Inicializar el cliente de Gemini
+// Usamos una verificación para evitar que la app explote si falta la clave al inicio
 const genAI = process.env.GEMINI_API_KEY 
     ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) 
     : null;
@@ -11,37 +11,50 @@ exports.chatWithConcierge = async (req, res) => {
     try {
         const { message } = req.body;
 
+        // 1. Verificación de Seguridad
+        // Si no hay API Key configurada en Render o .env, devolvemos error amigable
         if (!genAI) {
-            console.error("❌ Falta GEMINI_API_KEY en el .env o Render");
-            return res.status(500).json({ reply: "Lo siento, mi sistema de comunicación está en mantenimiento. (Falta API Key)" });
+            console.error("❌ ERROR CRÍTICO: No se encontró GEMINI_API_KEY en las variables de entorno.");
+            return res.status(500).json({ 
+                reply: "Lo siento, mi sistema de comunicación con Maranello no responde. (Error: Falta API Key)" 
+            });
         }
 
-        // Usamos el modelo Flash 1.5 que es rápido y estable
+        // 2. Configuración del Modelo
+        // Usamos 'gemini-1.5-flash' porque es el modelo más rápido y eficiente para chats en vivo
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+        // 3. Personalidad del Agente (System Prompt)
+        // Aquí definimos quién es "Enzo" y cómo debe comportarse
         const prompt = `
-            Eres Enzo, el consultor experto de SpeedCollect, una tienda de autos a escala 1:18 de lujo.
+            Actúa como "Enzo", el consultor experto y concierge de la tienda exclusiva "SpeedCollect Official Dealer".
             
-            Tus reglas:
-            1. Eres elegante, sofisticado y experto en Ferrari, Porsche y Bugatti.
-            2. Tu objetivo es vender. Destaca detalles técnicos (motor, pintura, interior).
-            3. Respuestas cortas (máximo 3 oraciones).
-            4. Si preguntan precio, di: "Es una pieza exclusiva, revisa el catálogo para la cotización actual".
-            5. Nunca inventes autos que no sean deportivos o de lujo.
-            6. Usa emojis con clase: 🏎️, ✨, 🏁.
+            Tus instrucciones de comportamiento:
+            1. Eres sofisticado, elegante y un experto absoluto en ingeniería automotriz (especialmente Ferrari, Porsche, Bugatti y clásicos).
+            2. Tu objetivo es vender modelos a escala 1:18 destacando su exclusividad, acabados a mano y detalles técnicos.
+            3. Tus respuestas deben ser breves, persuasivas y elegantes (máximo 3 oraciones).
+            4. Si te preguntan precios específicos, responde: "Es una pieza exclusiva, por favor revisa nuestro catálogo en vivo para la cotización actual".
+            5. Nunca inventes modelos que no existen.
+            6. Usa emojis con clase y moderación: 🏎️, 🏁, ✨, 🇮🇹.
 
-            Cliente: "${message}"
-            Enzo:
+            Cliente dice: "${message}"
+            Respuesta de Enzo:
         `;
 
+        // 4. Generar la respuesta con Gemini
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
+        // 5. Enviar respuesta al Frontend
         res.json({ reply: text });
 
     } catch (error) {
-        console.error("❌ Error con Gemini:", error);
-        res.status(500).json({ reply: "Mis disculpas, estoy atendiendo a otro cliente VIP. Intenta de nuevo en unos segundos." });
+        console.error("❌ Error de comunicación con Gemini:", error);
+        
+        // Mensaje de error elegante para el usuario
+        res.status(500).json({ 
+            reply: "Mis disculpas, estoy supervisando una entrega especial. Por favor, intenta preguntarme de nuevo en un momento." 
+        });
     }
 };
