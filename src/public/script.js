@@ -4,34 +4,36 @@ let allProducts = [];
 let iti = null;
 let map;
 
-// Importar librería PDF si está disponible
+// Importar librería PDF de manera segura
 const { jsPDF } = window.jspdf || {};
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Configuración de Teléfono Internacional
+    // 1. Configuración de Teléfono Internacional (Librería intl-tel-input)
     const phoneInput = document.querySelector("#reg-phone");
     if (phoneInput && window.intlTelInput) {
         iti = window.intlTelInput(phoneInput, {
             utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
             initialCountry: "auto",
             geoIpLookup: c => fetch("https://ipapi.co/json").then(r => r.json()).then(d => c(d.country_code)).catch(() => c("co")),
-            preferredCountries: ["co", "fr", "us", "es", "mx"],
+            preferredCountries: ["co", "mx", "us", "es"],
             separateDialCode: true,
             nationalMode: true
         });
+
+        // Validar en tiempo real al escribir o cambiar país
         phoneInput.addEventListener('input', validatePhone);
         phoneInput.addEventListener('countrychange', validatePhone);
     }
 
-    // 2. Listeners de Formularios
+    // 2. Listeners de Validación
     if(document.getElementById('register-form')) {
         document.getElementById('reg-name').addEventListener('input', validateName);
         document.getElementById('reg-email').addEventListener('input', validateEmail);
         document.getElementById('reg-pass').addEventListener('input', validatePassword);
         document.getElementById('register-form').addEventListener('submit', handleRegister);
     }
-
-    // 3. Cargas Iniciales
+    
+    // 3. Cargas Generales
     checkSession();
     updateCartUI(); 
     if(document.getElementById('products-container')) loadProducts();
@@ -40,272 +42,95 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 1. ADMIN PANEL & AUTH
-// ==========================================
-function checkSession() {
-    const userStr = localStorage.getItem('user');
-    const authDiv = document.getElementById('auth-section');
-    
-    if(userStr && authDiv) {
-        const u = JSON.parse(userStr);
-        let adminBtn = '';
-        
-        // Si es ADMIN, mostramos botón especial
-        if(u.role === 'admin') {
-            adminBtn = `<button onclick="loadAdminPanel()" class="btn btn-sm btn-warning fw-bold me-2"><i class="fa fa-crown"></i> ADMIN</button>`;
-        }
-
-        authDiv.innerHTML = `
-            <div class="d-flex align-items-center">
-                ${adminBtn}
-                <div class="dropdown">
-                    <button class="btn btn-outline-light btn-sm dropdown-toggle text-uppercase fw-bold" type="button" data-bs-toggle="dropdown">
-                        <i class="fa fa-user-astronaut me-1"></i> ${u.name.split(' ')[0]}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg border border-secondary">
-                        <li><span class="dropdown-item-text small text-muted">${u.email}</span></li>
-                        <li><hr class="dropdown-divider bg-secondary"></li>
-                        <li><button onclick="logout()" class="dropdown-item text-danger"><i class="fa fa-power-off me-2"></i> Salir</button></li>
-                    </ul>
-                </div>
-            </div>`;
-    }
-}
-
-// Cargar Panel de Admin
-async function loadAdminPanel() {
-    const token = localStorage.getItem('token');
-    if(!token) return alert("Acceso denegado");
-
-    try {
-        const res = await fetch(`${API_URL}/auth/users`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if(!res.ok) throw new Error("No tienes permisos de administrador");
-        
-        const users = await res.json();
-        
-        // Crear filas de la tabla
-        let rows = users.map(u => `
-            <tr id="user-row-${u.id}">
-                <td>${u.id}</td>
-                <td>${u.name}</td>
-                <td>${u.email}</td>
-                <td>${u.role === 'admin' ? '<span class="badge bg-warning text-dark">ADMIN</span>' : '<span class="badge bg-secondary">CLIENTE</span>'}</td>
-                <td>
-                    ${u.role !== 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})"><i class="fa fa-trash"></i></button>` : ''}
-                </td>
-            </tr>
-        `).join('');
-
-        const modalHtml = `
-        <div class="modal fade" id="adminModal" tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
-                <div class="modal-content bg-dark text-white border-warning">
-                    <div class="modal-header border-secondary">
-                        <h5 class="modal-title text-warning fw-bold"><i class="fa fa-cogs"></i> GESTIÓN DE USUARIOS</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <h6 class="mb-3 text-muted">Usuarios Registrados: <span class="text-white">${users.length}</span></h6>
-                        <div class="table-responsive">
-                            <table class="table table-dark table-hover border-secondary align-middle">
-                                <thead>
-                                    <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr>
-                                </thead>
-                                <tbody>${rows}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-
-        // Limpiar y mostrar
-        const oldModal = document.getElementById('adminModal');
-        if(oldModal) oldModal.remove();
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        new bootstrap.Modal(document.getElementById('adminModal')).show();
-
-    } catch(e) {
-        alert("Error: " + e.message);
-    }
-}
-
-// Eliminar Usuario (Funcionalidad Admin)
-async function deleteUser(id) {
-    if(!confirm("¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.")) return;
-    
-    const token = localStorage.getItem('token');
-    try {
-        const res = await fetch(`${API_URL}/auth/users/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if(res.ok) {
-            document.getElementById(`user-row-${id}`).remove();
-            alert("Usuario eliminado correctamente.");
-        } else {
-            alert("Error al eliminar usuario.");
-        }
-    } catch(e) {
-        console.error(e);
-        alert("Error de conexión.");
-    }
-}
-
-// ==========================================
-// 2. REGISTRO & VERIFICACIÓN (CRÍTICO: EMAIL)
-// ==========================================
-async function handleRegister(e) {
-    e.preventDefault();
-    if (!validateName() || !validateEmail() || !validatePassword() || !validatePhone()) return alert("Corrige los errores antes de enviar.");
-
-    const btn = e.target.querySelector('button');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando código...';
-    btn.disabled = true;
-
-    const data = {
-        name: document.getElementById('reg-name').value,
-        email: document.getElementById('reg-email').value,
-        password: document.getElementById('reg-pass').value,
-        phone: iti.getNumber()
-    };
-
-    try {
-        console.log("📤 Iniciando registro para:", data.email);
-        const res = await fetch(`${API_URL}/auth/register`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
-        });
-        
-        const json = await res.json();
-        
-        if (res.ok) {
-            console.log("✅ Código enviado.");
-            localStorage.setItem('pendingEmail', data.email);
-            let code = prompt(`✅ Código enviado a ${data.email}.\n(Revisa Spam si no llega).\n\nIngresa el código aquí:`);
-            
-            if(code) {
-                await verifyCode(data.email, code);
-            } else {
-                alert("Debes ingresar el código para activar la cuenta.");
-            }
-        } else {
-            console.error("❌ Error Backend:", json);
-            alert("❌ NO SE PUDO ENVIAR EL CÓDIGO:\n" + json.message);
-        }
-    } catch (err) { 
-        console.error("❌ Error Red:", err);
-        alert("Error de conexión con el servidor. Revisa tu internet."); 
-    } finally { 
-        btn.innerHTML = originalText; 
-        btn.disabled = false; 
-    }
-}
-
-async function verifyCode(email, code) {
-    try {
-        const res = await fetch(`${API_URL}/auth/verify`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email, code })
-        });
-        const json = await res.json();
-        
-        if(res.ok) {
-            alert("🎉 ¡CUENTA VERIFICADA! Bienvenido a la familia.");
-            window.location.href = 'login.html';
-        } else {
-            alert("❌ Código incorrecto o expirado.");
-        }
-    } catch(e) { alert("Error verificando código."); }
-}
-
-function setupLogin() {
-    const form = document.getElementById('login-form');
-    if(!form) return;
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-pass').value;
-        try {
-            const res = await fetch(`${API_URL}/auth/login`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email, password })
-            });
-            const json = await res.json();
-            if(res.ok) {
-                localStorage.setItem('user', JSON.stringify(json.user));
-                localStorage.setItem('token', json.token);
-                window.location.href = 'index.html';
-            } else alert(json.message);
-        } catch(err) { alert("Error conexión"); }
-    });
-}
-
-window.logout = function() { 
-    localStorage.clear(); 
-    window.location.href = 'index.html'; 
-}
-
-// ==========================================
-// 3. CATÁLOGO DE LUJO & RESEÑAS
+// 1. CATÁLOGO & VISOR 3D (CORREGIDO IMÁGENES)
 // ==========================================
 async function loadProducts() {
     const cont = document.getElementById('products-container');
     const loader = document.getElementById('loader');
+    
     try {
         const res = await fetch(`${API_URL}/products`);
+        if(!res.ok) throw new Error(`API Error: ${res.status}`);
+        
         allProducts = await res.json();
-        if(loader) loader.classList.add('d-none');
-        if(cont) cont.classList.remove('d-none');
+        
+        if (loader) loader.classList.add('d-none');
+        if (cont) cont.classList.remove('d-none');
+        
         renderProducts(allProducts);
-    } catch(e) { console.error(e); }
+        
+    } catch (e) {
+        console.error(e);
+        if (loader) loader.innerHTML = '<div class="text-danger">Error de conexión con el servidor.</div>';
+    }
 }
 
 function renderProducts(products) {
     const cont = document.getElementById('products-container');
-    if(!cont) return;
-    
+    if (!cont) return;
+
     if(!products || products.length === 0) { 
         cont.innerHTML = '<div class="col-12 text-center text-muted">Inventario agotado por el momento.</div>'; 
         return; 
     }
 
     cont.innerHTML = products.map(p => {
+        // Lógica de Imagen Principal
+        const img = p.image_url && p.image_url.startsWith('http') ? p.image_url : 'https://placehold.co/600x400/1a1a1a/FFF?text=Imagen+No+Disponible';
+        
+        // Lógica de Stock
         const inCart = cart.find(c => c.id === p.id)?.quantity || 0;
         const realStock = p.stock - inCart;
         const isOut = realStock <= 0;
-        const price = parseFloat(p.price).toLocaleString('es-CO', {style:'currency', currency:'COP', minimumFractionDigits: 0});
-        
-        const imgUrl = p.image_url || 'https://images.unsplash.com/photo-1594058573823-d8edf10d5d6d?auto=format&fit=crop&w=500';
+        const btnState = isOut ? 'disabled' : '';
+        const stockBadge = isOut 
+            ? `<span class="badge bg-secondary position-absolute top-0 start-0 m-3 shadow" style="z-index:5">AGOTADO</span>`
+            : (realStock < 3 
+                ? `<span class="badge bg-warning text-dark position-absolute top-0 start-0 m-3 shadow" style="z-index:5">¡ÚLTIMAS ${realStock}!</span>`
+                : `<span class="badge bg-success position-absolute top-0 start-0 m-3 shadow" style="z-index:5">DISPONIBLE</span>`);
+
+        const precio = parseFloat(p.price).toLocaleString('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 });
 
         return `
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="product-card h-100 bg-dark text-white border border-secondary position-relative shadow-lg overflow-hidden">
-                <span class="badge ${isOut ? 'bg-secondary' : 'bg-danger'} position-absolute m-3 shadow" style="z-index:10">${isOut ? 'AGOTADO' : 'DISPONIBLE'}</span>
+                ${stockBadge}
                 
                 <div class="card-img-wrap" style="height:250px; cursor:pointer;" onclick="showProductDetails(${p.id})">
-                    <img src="${imgUrl}" class="w-100 h-100 object-fit-cover" onerror="this.src='https://via.placeholder.com/500x300?text=Auto+Sin+Imagen'">
-                    <div class="overlay-3d position-absolute top-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.6); opacity:0; transition:0.3s">
-                        <div class="text-center">
-                            <i class="fa-solid fa-eye fa-2x text-white mb-2"></i>
-                            <p class="text-uppercase fw-bold text-white small ls-2">Ver Detalles y Reseñas</p>
+                    <!-- AQUI ESTA LA CORRECCION DEL ERROR DE IMAGEN -->
+                    <img src="${img}" class="w-100 h-100 object-fit-cover" 
+                         onerror="this.onerror=null; this.src='https://placehold.co/600x400/333/FFF?text=Sin+Imagen';">
+                    
+                    <div class="overlay-3d position-absolute top-0 w-100 h-100 d-flex align-items-center justify-content-center" 
+                         style="background:rgba(0,0,0,0.6); opacity:0; transition:0.3s">
+                        <div class="text-center text-white">
+                            <i class="fa-solid fa-eye fa-2x mb-2"></i>
+                            <p class="fw-bold text-uppercase small ls-2">Ver Detalles y Reseñas</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="p-3">
-                    <h5 class="fw-bold text-uppercase text-truncate">${p.name}</h5>
-                    <p class="text-danger fw-bold fs-5">${price}</p>
-                    <button class="btn btn-outline-light w-100 text-uppercase" onclick="addToCart(${p.id})" ${isOut ? 'disabled' : ''}>
-                        <i class="fa fa-cart-plus me-2"></i> ${isOut ? 'Sin Stock' : 'Añadir'}
-                    </button>
+                <div class="p-4 bg-dark-glass">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-warning small"><i class="fa fa-star"></i> 4.9</span>
+                        <span class="text-muted small">Ref: 00${p.id}</span>
+                    </div>
+                    
+                    <h5 class="fw-bold text-uppercase text-white text-truncate mb-1">${p.name}</h5>
+                    <p class="small text-secondary text-truncate">${p.description || 'Edición Limitada'}</p>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-secondary">
+                        <div class="price-tag fw-bold fs-4 text-danger">${precio}</div>
+                        <button class="btn btn-outline-light btn-sm rounded-circle p-2" onclick="addToCart(${p.id})" ${btnState}>
+                            <i class="fa fa-cart-plus fa-lg"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>`;
     }).join('');
-    
+
+    // Efecto Hover
     document.querySelectorAll('.card-img-wrap').forEach(el => {
         el.addEventListener('mouseenter', () => el.querySelector('.overlay-3d').style.opacity = '1');
         el.addEventListener('mouseleave', () => el.querySelector('.overlay-3d').style.opacity = '0');
@@ -348,7 +173,7 @@ window.showProductDetails = function(id) {
                             <div class="ratio ratio-16x9 bg-black rounded overflow-hidden border border-secondary">
                                 ${p.model_url ? 
                                 `<model-viewer src="${p.model_url}" alt="${p.name}" auto-rotate camera-controls style="width:100%; height:100%;"></model-viewer>` :
-                                `<img src="${p.image_url}" class="object-fit-cover w-100 h-100">`
+                                `<img src="${p.image_url}" class="object-fit-cover w-100 h-100" onerror="this.src='https://placehold.co/600x400?text=No+3D';">`
                                 }
                             </div>
                         </div>
@@ -375,7 +200,99 @@ window.showProductDetails = function(id) {
 }
 
 // ==========================================
-// 4. PAGOS Y FACTURA PDF
+// 2. ADMIN PANEL
+// ==========================================
+function checkSession() {
+    const userStr = localStorage.getItem('user');
+    const authDiv = document.getElementById('auth-section');
+    
+    if(userStr && authDiv) {
+        const u = JSON.parse(userStr);
+        let adminBtn = '';
+        if(u.role === 'admin') {
+            adminBtn = `<button onclick="loadAdminPanel()" class="btn btn-sm btn-warning fw-bold me-2"><i class="fa fa-crown"></i> ADMIN</button>`;
+        }
+
+        authDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                ${adminBtn}
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle text-uppercase fw-bold" type="button" data-bs-toggle="dropdown">
+                        <i class="fa fa-user-astronaut me-1"></i> ${u.name.split(' ')[0]}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg border border-secondary">
+                        <li><span class="dropdown-item-text small text-muted">${u.email}</span></li>
+                        <li><hr class="dropdown-divider bg-secondary"></li>
+                        <li><button onclick="logout()" class="dropdown-item text-danger"><i class="fa fa-power-off me-2"></i> Salir</button></li>
+                    </ul>
+                </div>
+            </div>`;
+    }
+}
+
+async function loadAdminPanel() {
+    const token = localStorage.getItem('token');
+    if(!token) return alert("Acceso denegado");
+
+    try {
+        const res = await fetch(`${API_URL}/auth/users`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if(!res.ok) throw new Error("No autorizado");
+        
+        const users = await res.json();
+        
+        let rows = users.map(u => `
+            <tr id="user-row-${u.id}">
+                <td>${u.id}</td>
+                <td>${u.name}</td>
+                <td>${u.email}</td>
+                <td>${u.role === 'admin' ? '<span class="badge bg-warning text-dark">ADMIN</span>' : '<span class="badge bg-secondary">CLIENTE</span>'}</td>
+                <td>
+                    ${u.role !== 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})"><i class="fa fa-trash"></i></button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+
+        const modalHtml = `
+        <div class="modal fade" id="adminModal" tabindex="-1">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content bg-dark text-white border-warning">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title text-warning fw-bold"><i class="fa fa-cogs"></i> GESTIÓN USUARIOS</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover border-secondary">
+                                <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Acciones</th></tr></thead>
+                                <tbody>${rows}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+
+        const oldModal = document.getElementById('adminModal');
+        if(oldModal) oldModal.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        new bootstrap.Modal(document.getElementById('adminModal')).show();
+    } catch(e) { alert("Error: " + e.message); }
+}
+
+async function deleteUser(id) {
+    if(!confirm("¿Eliminar usuario?")) return;
+    try {
+        const res = await fetch(`${API_URL}/auth/users/${id}`, {
+            method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
+        if(res.ok) { document.getElementById(`user-row-${id}`).remove(); alert("Eliminado."); }
+    } catch(e) { alert("Error."); }
+}
+
+// ==========================================
+// 3. PAGOS Y FACTURA PDF
 // ==========================================
 window.openPaymentModal = function() {
     if(cart.length === 0) return alert("Tu garaje está vacío.");
@@ -435,16 +352,15 @@ window.openPaymentModal = function() {
     const modal = new bootstrap.Modal(modalEl);
     modal.show();
 
-    // Evento Pagar
     const payBtn = document.getElementById('btn-pay-now');
     payBtn.onclick = async function() {
         payBtn.disabled = true;
         payBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
-        await new Promise(r => setTimeout(r, 2000)); // Simular banco
+        await new Promise(r => setTimeout(r, 2000)); 
         
         generateInvoicePDF();
         
-        alert("¡PAGO APROBADO! Tu factura se está descargando.");
+        alert("¡PAGO APROBADO! Factura descargada.");
         cart = [];
         updateCartUI();
         renderProducts(allProducts);
@@ -460,7 +376,6 @@ function generateInvoicePDF() {
     const doc = new window.jspdf.jsPDF();
     const date = new Date().toLocaleDateString();
     
-    // Header Factura
     doc.setFillColor(217, 4, 41);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
@@ -469,14 +384,12 @@ function generateInvoicePDF() {
     doc.setFontSize(12);
     doc.text("Factura de Venta", 105, 30, null, null, "center");
 
-    // Datos
     const user = JSON.parse(localStorage.getItem('user')) || {name: "Cliente", email: "N/A"};
     doc.setTextColor(0, 0, 0);
     doc.text(`Cliente: ${user.name}`, 14, 50);
     doc.text(`Fecha: ${date}`, 14, 56);
     doc.text(`Ref: #SC-${Date.now()}`, 14, 62);
 
-    // Tabla
     const tableData = cart.map(item => [
         item.name, item.quantity, `$${parseFloat(item.price).toLocaleString('es-CO')}`, `$${(item.price * item.quantity).toLocaleString('es-CO')}`
     ]);
@@ -497,76 +410,7 @@ function generateInvoicePDF() {
 }
 
 // ==========================================
-// 5. CARRITO
-// ==========================================
-window.addToCart = function(id) {
-    const p = allProducts.find(x => x.id === id);
-    const item = cart.find(x => x.id === id);
-    if(item) {
-        if(item.quantity >= p.stock) return alert("¡Stock insuficiente!");
-        item.quantity++;
-    } else {
-        cart.push({...p, quantity: 1});
-    }
-    updateCartUI();
-    renderProducts(allProducts);
-}
-
-window.removeFromCart = function(id) {
-    cart = cart.filter(x => x.id !== id);
-    updateCartUI();
-    renderProducts(allProducts);
-}
-
-function updateCartUI() {
-    const count = document.getElementById('cart-count');
-    const list = document.getElementById('cart-items');
-    const totalEl = document.getElementById('cart-total');
-    
-    if(count) {
-        const qty = cart.reduce((a,b)=>a+b.quantity,0);
-        count.innerText = qty;
-        count.style.display = qty > 0 ? 'block' : 'none';
-    }
-
-    if(list && totalEl) {
-        let total = 0;
-        list.innerHTML = cart.length ? cart.map(i => {
-            total += i.price * i.quantity;
-            return `<div class="d-flex justify-content-between mb-2 border-bottom border-secondary pb-2">
-                <div><small>${i.name}</small> <small class="text-muted">(${i.quantity})</small></div>
-                <div class="d-flex align-items-center">
-                    <span class="text-success me-2">$${(i.price * i.quantity).toLocaleString('es-CO')}</span>
-                    <button onclick="removeFromCart(${i.id})" class="btn btn-sm text-danger p-0"><i class="fa fa-times"></i></button>
-                </div>
-            </div>`;
-        }).join('') : '<div class="text-center text-muted">Vacío</div>';
-        totalEl.innerText = total.toLocaleString('es-CO', {style:'currency', currency:'COP', minimumFractionDigits: 0});
-    }
-}
-
-// ==========================================
-// 6. MAPA DE LUJO
-// ==========================================
-function initMap() {
-    const lat = 4.666, lng = -74.053;
-    map = L.map('map').setView([lat, lng], 15);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; CartoDB', subdomains: 'abcd', maxZoom: 20
-    }).addTo(map);
-
-    const icon = L.divIcon({
-        className: 'custom-div-icon',
-        html: "<div style='background-color:#ff2800; width:15px; height:15px; border-radius:50%; box-shadow:0 0 15px #ff2800; border: 2px solid white;'></div>",
-        iconSize: [15, 15], iconAnchor: [7, 7]
-    });
-
-    L.marker([lat, lng], { icon: icon }).addTo(map)
-        .bindPopup(`<div style="text-align:center; color:black;"><b style="color:#d90429">SPEEDCOLLECT HQ</b><br>Bogotá, Colombia</div>`).openPopup();
-}
-
-// ==========================================
-// 7. VALIDACIONES ESTRICTAS
+// 4. VALIDACIONES ESTRICTAS & AUTH
 // ==========================================
 function validatePhone() {
     const input = document.querySelector("#reg-phone");
@@ -631,4 +475,148 @@ function showSuccess(input, errSpan) {
     input.classList.add('is-valid');
     if(errSpan) { errSpan.textContent = ''; }
     return true;
+}
+
+// HANDLERS AUTH
+async function handleRegister(e) {
+    e.preventDefault();
+    if (!validateName() || !validateEmail() || !validatePassword() || !validatePhone()) return alert("Corrige los errores.");
+
+    const btn = e.target.querySelector('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enviando...';
+    btn.disabled = true;
+
+    const data = {
+        name: document.getElementById('reg-name').value,
+        email: document.getElementById('reg-email').value,
+        password: document.getElementById('reg-pass').value,
+        phone: iti.getNumber()
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        
+        if (res.ok) {
+            localStorage.setItem('pendingEmail', data.email);
+            let code = prompt(`✅ Código enviado a ${data.email}.\nIngrésalo aquí:`);
+            if(code) verifyCode(data.email, code);
+        } else {
+            alert("❌ Error: " + json.message);
+        }
+    } catch (err) { alert("Error conexión"); }
+    finally { btn.innerHTML = originalText; btn.disabled = false; }
+}
+
+async function verifyCode(email, code) {
+    try {
+        const res = await fetch(`${API_URL}/auth/verify`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email, code })
+        });
+        if(res.ok) {
+            alert("¡Cuenta verificada! Inicia sesión.");
+            window.location.href = 'login.html';
+        } else {
+            alert("Código incorrecto.");
+        }
+    } catch(e) { alert("Error verificando."); }
+}
+
+function setupLogin() {
+    const form = document.getElementById('login-form');
+    if(!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-pass').value;
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email, password })
+            });
+            const json = await res.json();
+            if(res.ok) {
+                localStorage.setItem('user', JSON.stringify(json.user));
+                localStorage.setItem('token', json.token);
+                window.location.href = 'index.html';
+            } else alert(json.message);
+        } catch(err) { alert("Error conexión"); }
+    });
+}
+
+window.logout = function() { 
+    localStorage.clear(); 
+    window.location.href = 'index.html'; 
+}
+
+// ==========================================
+// 5. CARRITO Y UTILIDADES
+// ==========================================
+window.addToCart = function(id) {
+    const p = allProducts.find(x => x.id === id);
+    const item = cart.find(x => x.id === id);
+    if(item) {
+        if(item.quantity >= p.stock) return alert("¡Stock insuficiente!");
+        item.quantity++;
+    } else {
+        cart.push({...p, quantity: 1});
+    }
+    updateCartUI();
+    renderProducts(allProducts);
+}
+
+window.removeFromCart = function(id) {
+    cart = cart.filter(x => x.id !== id);
+    updateCartUI();
+    renderProducts(allProducts);
+}
+
+function updateCartUI() {
+    const count = document.getElementById('cart-count');
+    const list = document.getElementById('cart-items');
+    const totalEl = document.getElementById('cart-total');
+    
+    if(count) {
+        const qty = cart.reduce((a,b)=>a+b.quantity,0);
+        count.innerText = qty;
+        count.style.display = qty > 0 ? 'block' : 'none';
+    }
+
+    if(list && totalEl) {
+        let total = 0;
+        list.innerHTML = cart.length ? cart.map(i => {
+            total += i.price * i.quantity;
+            return `<div class="d-flex justify-content-between mb-2 border-bottom border-secondary pb-2">
+                <div><small>${i.name}</small> <small class="text-muted">(${i.quantity})</small></div>
+                <div class="d-flex align-items-center">
+                    <span class="text-success me-2">$${(i.price * i.quantity).toLocaleString('es-CO')}</span>
+                    <button onclick="removeFromCart(${i.id})" class="btn btn-sm text-danger p-0"><i class="fa fa-times"></i></button>
+                </div>
+            </div>`;
+        }).join('') : '<div class="text-center text-muted">Vacío</div>';
+        
+        totalEl.innerText = total.toLocaleString('es-CO', {style:'currency', currency:'COP', minimumFractionDigits: 0});
+    }
+}
+
+// ==========================================
+// 6. MAPA DE LUJO
+// ==========================================
+function initMap() {
+    const lat = 4.666, lng = -74.053;
+    map = L.map('map').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; CartoDB', subdomains: 'abcd', maxZoom: 20
+    }).addTo(map);
+
+    const icon = L.divIcon({
+        className: 'custom-div-icon',
+        html: "<div style='background-color:#ff2800; width:15px; height:15px; border-radius:50%; box-shadow:0 0 15px #ff2800; border: 2px solid white;'></div>",
+        iconSize: [15, 15], iconAnchor: [7, 7]
+    });
+
+    L.marker([lat, lng], { icon: icon }).addTo(map)
+        .bindPopup(`<div style="text-align:center; color:black;"><b style="color:#d90429">SPEEDCOLLECT HQ</b><br>Bogotá, Colombia</div>`).openPopup();
 }
