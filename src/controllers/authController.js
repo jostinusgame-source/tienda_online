@@ -2,11 +2,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const emailService = require('../services/emailService');
-const db = require('../config/database'); // Acceso directo para updates
+const db = require('../config/database'); // Necesario para updates
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// REGISTRO OPTIMIZADO
+// REGISTRO OPTIMIZADO: Elimina el await para velocidad
 exports.register = async (req, res) => {
     try {
         const { name, email, password, phone } = req.body;
@@ -25,7 +25,7 @@ exports.register = async (req, res) => {
             email_verification_expiration: exp
         });
 
-        // ⚡ ENVIAR CORREO EN SEGUNDO PLANO (NO AWAIT)
+        // ⚡ REGISTRO INSTANTÁNEO: Envía el correo en segundo plano (quita el bloqueo)
         emailService.sendVerificationCode(email, code)
             .catch(err => console.error("Error enviando correo (Background):", err));
 
@@ -37,7 +37,6 @@ exports.register = async (req, res) => {
     }
 };
 
-// LOGIN
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -63,11 +62,11 @@ exports.login = async (req, res) => {
     }
 };
 
-// VERIFICAR EMAIL
 exports.verifyEmail = async (req, res) => {
     try {
         const { email, code } = req.body;
         const user = await User.findByEmail(email);
+        
         if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
         
         if (String(user.email_verification_code) !== String(code)) {
@@ -79,7 +78,7 @@ exports.verifyEmail = async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Error verificando.' }); }
 };
 
-// RECUPERACIÓN DE CONTRASEÑA (AHORA SÍ FUNCIONA)
+// RECUPERACIÓN DE CONTRASEÑA (Lógica Real)
 exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -93,11 +92,12 @@ exports.forgotPassword = async (req, res) => {
         await db.execute('UPDATE users SET recovery_code = ? WHERE email = ?', [recoveryCode, email]);
 
         // Enviar correo de recuperación
-        // Reutilizamos la función de envío de código para simplificar
         emailService.sendVerificationCode(email, recoveryCode)
             .catch(e => console.error("Error correo recuperación:", e));
 
+        // RESPUESTA EXITOSA
         res.json({ message: 'Código enviado a tu correo.' });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error procesando solicitud.' });
@@ -119,6 +119,7 @@ exports.resetPassword = async (req, res) => {
         await db.execute('UPDATE users SET password = ?, recovery_code = NULL WHERE id = ?', [hash, user.id]);
         
         res.json({ message: 'Contraseña actualizada.' });
+
     } catch (error) {
         res.status(500).json({ message: 'Error actualizando contraseña.' });
     }
