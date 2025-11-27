@@ -1,31 +1,397 @@
-const API_URL = '/api'; 
+const API_URL = '/api';
 let cart = [];
-let allProducts = []; 
-let map; // Variable para el mapa
-let iti = null; // Variable para el input de teléfono
+let allProducts = [];
+let iti = null;
+let map;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Iniciar Sesión y UI
-    checkSession();
-    updateCartUI();
+    // 1. Configuración de Teléfono Internacional (Librería intl-tel-input)
+    const phoneInput = document.querySelector("#reg-phone");
+    if (phoneInput && window.intlTelInput) {
+        iti = window.intlTelInput(phoneInput, {
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+            initialCountry: "auto",
+            geoIpLookup: c => fetch("https://ipapi.co/json").then(r => r.json()).then(d => c(d.country_code)).catch(() => c("co")),
+            preferredCountries: ["co", "fr", "us", "es", "mx"], // Francia agregada
+            separateDialCode: true,
+            nationalMode: true
+        });
 
-    // 2. Detectar qué página es y cargar lo necesario
-    if (document.getElementById('products-container')) loadProducts();
-    if (document.getElementById('map')) initMap();
-    if (document.getElementById('register-form')) setupRegister();
-    if (document.getElementById('login-form')) setupLogin();
-    
-    // 3. Iniciar Carrusel Bootstrap (Hero Section)
-    const myCarousel = document.querySelector('#heroCarousel');
-    if(myCarousel) {
-        new bootstrap.Carousel(myCarousel, { interval: 5000, wrap: true });
+        // Validar en tiempo real al escribir o cambiar país
+        phoneInput.addEventListener('input', validatePhone);
+        phoneInput.addEventListener('countrychange', validatePhone);
     }
 
-    // 4. Listener para el link de "Olvidé contraseña"
-    const forgotLink = document.getElementById('forgot-link');
-    if (forgotLink) setupForgotPassword(forgotLink);
+    // 2. Listeners de Validación
+    if(document.getElementById('register-form')) {
+        document.getElementById('reg-name').addEventListener('input', validateName);
+        document.getElementById('reg-email').addEventListener('input', validateEmail);
+        document.getElementById('reg-pass').addEventListener('input', validatePassword);
+        document.getElementById('register-form').addEventListener('submit', handleRegister);
+    }
+    
+    // 3. Cargas Generales
+    checkSession();
+    updateCartUI(); // Asegurar que el carrito se pinte al cargar
+    if(document.getElementById('products-container')) loadProducts();
+    if(document.getElementById('map')) initMap();
+    if(document.getElementById('login-form')) setupLogin();
 });
 
+// ==========================================
+// VALIDACIONES (ESTRICTAS Y MUNDIALES)
+// ==========================================
+
+function validatePhone() {
+    const input = document.querySelector("#reg-phone");
+    const err = document.getElementById('err-phone');
+    
+    if (!iti) return false;
+
+    // 1. Validación Maestra de la Librería (Detecta país, longitud y formato oficial)
+    if (iti.isValidNumber()) {
+        return showSuccess(input, err);
+    } else {
+        // Diagnóstico de error específico
+        const errorCode = iti.getValidationError();
+        let msg = "Número inválido.";
+        
+        switch(errorCode) {
+            case 1: msg = "Código de país inválido."; break;
+            case 2: msg = "El número es demasiado corto."; break;
+            case 3: msg = "El número es demasiado largo."; break;
+            case 4: msg = "Formato incorrecto."; break;
+        }
+        return showError(input, err, msg);
+    }
+}
+
+function validateName() {
+    const input = document.getElementById('reg-name');
+    const err = document.getElementById('err-name');
+    const val = input.value.trim();
+    
+    // Reglas Estrictas
+    const words = val.split(/\s+/);
+    if (words.length < 1 || val === "") return showError(input, err, "Nombre requerido.");
+    if (words.length > 3) return showError(input, err, "Máximo 3 palabras.");
+
+    // Anti-repetición de palabras
+    const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+    if (uniqueWords.size !== words.length) return showError(input, err, "No repitas nombres.");
+
+    // Solo letras
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(val)) return showError(input, err, "Solo letras permitidas.");
+
+    // Anti-repetición de caracteres (AA, nn) en cada palabra
+    for(let w of words) {
+        if(/(.)\1/.test(w.toLowerCase())) return showError(input, err, `Letras repetidas en "${w}".`);
+        if(w.length < 2) return showError(input, err, `"${w}" es muy corto.`);
+    }
+
+    return showSuccess(input, err);
+}
+
+function validateEmail() {
+    const input = document.getElementById('reg-email');
+    const err = document.getElementById('err-email');
+    const val = input.value.trim();
+
+    // Regex Estricto
+    if (!/^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(val)) {
+        return showError(input, err, "Correo inválido o muy corto.");
+    }
+    
+    // Dominios temporales
+    if (val.includes('yopmail') || val.includes('tempmail')) {
+        return showError(input, err, "No aceptamos correos temporales.");
+    }
+    return showSuccess(input, err);
+}
+
+function validatePassword() {
+    const input = document.getElementById('reg-pass');
+    const err = document.getElementById('err-pass');
+    const val = input.value;
+
+    if (val.length < 10) return showError(input, err, "Mínimo 10 caracteres.");
+    if (!/[A-Z]/.test(val)) return showError(input, err, "Falta Mayúscula.");
+    if (!/[a-z]/.test(val)) return showError(input, err, "Falta Minúscula.");
+    if (!/[0-9]/.test(val)) return showError(input, err, "Falta Número.");
+    if (!/[!@#$%^&*]/.test(val)) return showError(input, err, "Falta Símbolo (!@#$%).");
+    if (/(.)\1\1/.test(val)) return showError(input, err, "No repitas caracteres (aaa).");
+
+    return showSuccess(input, err);
+}
+
+// Helpers visuales
+function showError(input, errSpan, msg) {
+    input.classList.add('is-invalid');
+    input.classList.remove('is-valid');
+    if(errSpan) { errSpan.textContent = msg; errSpan.style.color = 'red'; }
+    return false;
+}
+function showSuccess(input, errSpan) {
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if(errSpan) { errSpan.textContent = ''; }
+    return true;
+}
+
+// ==========================================
+// REGISTRO & LOGIN
+// ==========================================
+async function handleRegister(e) {
+    e.preventDefault();
+
+    if (!validateName() || !validateEmail() || !validatePassword() || !validatePhone()) {
+        alert("Corrige los errores antes de enviar.");
+        return;
+    }
+
+    const btn = e.target.querySelector('button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Procesando...';
+    btn.disabled = true;
+
+    const data = {
+        name: document.getElementById('reg-name').value,
+        email: document.getElementById('reg-email').value,
+        password: document.getElementById('reg-pass').value,
+        phone: iti.getNumber() // Obtiene el número completo con prefijo (+57...)
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        const json = await res.json();
+
+        if (res.ok) {
+            localStorage.setItem('pendingEmail', data.email);
+            let code = prompt(`✅ Código enviado a ${data.email}.\nIngrésalo aquí:`);
+            if(code) verifyCode(data.email, code);
+        } else {
+            alert("❌ Error: " + json.message);
+        }
+    } catch (err) {
+        alert("Error de conexión.");
+        console.error(err);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function verifyCode(email, code) {
+    try {
+        const res = await fetch(`${API_URL}/auth/verify`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email, code })
+        });
+        const json = await res.json();
+        if(res.ok) {
+            alert("¡Cuenta verificada! Inicia sesión.");
+            window.location.href = 'login.html';
+        } else {
+            alert("Error: " + json.message);
+        }
+    } catch(e) { alert("Error verificando código."); }
+}
+
+function setupLogin() {
+    const form = document.getElementById('login-form');
+    if(!form) return;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-pass').value;
+
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password })
+            });
+            const json = await res.json();
+            if(res.ok) {
+                localStorage.setItem('user', JSON.stringify(json.user));
+                localStorage.setItem('token', json.token);
+                window.location.href = 'index.html';
+            } else {
+                alert(json.message);
+            }
+        } catch(err) { alert("Error de conexión"); }
+    });
+}
+
+// ==========================================
+// CATÁLOGO, CARRITO & PAGOS
+// ==========================================
+async function loadProducts() {
+    const cont = document.getElementById('products-container');
+    const loader = document.getElementById('loader');
+    try {
+        const res = await fetch(`${API_URL}/products`);
+        allProducts = await res.json();
+        if(loader) loader.classList.add('d-none');
+        if(cont) cont.classList.remove('d-none');
+        renderProducts(allProducts);
+    } catch(e) { console.error(e); }
+}
+
+function renderProducts(products) {
+    const cont = document.getElementById('products-container');
+    if(!cont) return;
+    
+    cont.innerHTML = products.map(p => {
+        const inCart = cart.find(c => c.id === p.id)?.quantity || 0;
+        const realStock = p.stock - inCart;
+        const isOut = realStock <= 0;
+        const price = parseFloat(p.price).toLocaleString('es-CO', {style:'currency', currency:'COP', minimumFractionDigits: 0});
+        
+        // Usar modelo 3D real si existe, sino fallback
+        const modelUrl = p.model_url || "https://modelviewer.dev/shared-assets/models/Astronaut.glb";
+        const safeName = p.name.replace(/'/g, "\\'");
+
+        return `
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="product-card h-100 bg-dark text-white border border-secondary position-relative">
+                <span class="badge ${isOut ? 'bg-secondary' : 'bg-success'} position-absolute m-3">${isOut ? 'AGOTADO' : 'DISPONIBLE'}</span>
+                
+                <div class="card-img-wrap" style="height:250px; cursor:pointer;" onclick="viewProduct3D('${safeName}', '${modelUrl}')">
+                    <img src="${p.image_url}" class="w-100 h-100 object-fit-cover">
+                    <div class="overlay-3d position-absolute top-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background:rgba(0,0,0,0.5); opacity:0; transition:0.3s">
+                        <i class="fa-solid fa-cube fa-3x text-danger"></i>
+                    </div>
+                </div>
+                
+                <div class="p-3">
+                    <h5 class="fw-bold text-uppercase">${p.name}</h5>
+                    <p class="text-danger fw-bold fs-5">${price}</p>
+                    <button class="btn btn-outline-light w-100" onclick="addToCart(${p.id})" ${isOut ? 'disabled' : ''}>
+                        ${isOut ? 'Sin Stock' : 'Agregar al Garaje'}
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+    
+    // Hover effect
+    document.querySelectorAll('.card-img-wrap').forEach(el => {
+        el.addEventListener('mouseenter', () => el.querySelector('.overlay-3d').style.opacity = '1');
+        el.addEventListener('mouseleave', () => el.querySelector('.overlay-3d').style.opacity = '0');
+    });
+}
+
+window.viewProduct3D = function(name, url) {
+    const viewer = document.querySelector('model-viewer');
+    if(viewer) {
+        viewer.src = url;
+        viewer.alt = name;
+        viewer.scrollIntoView({behavior: 'smooth'});
+        alert(`Cargando vista 3D: ${name}`);
+    } else {
+        // Fallback: abrir modal si no hay viewer en página principal
+        window.open(url, '_blank');
+    }
+}
+
+// CARRITO
+window.addToCart = function(id) {
+    const p = allProducts.find(x => x.id === id);
+    const item = cart.find(x => x.id === id);
+    if(item) {
+        if(item.quantity >= p.stock) return alert("¡No hay más stock!");
+        item.quantity++;
+    } else {
+        cart.push({...p, quantity: 1});
+    }
+    updateCartUI();
+    renderProducts(allProducts); // Actualizar stock visual
+}
+
+window.removeFromCart = function(id) {
+    cart = cart.filter(x => x.id !== id);
+    updateCartUI();
+    renderProducts(allProducts);
+}
+
+function updateCartUI() {
+    const count = document.getElementById('cart-count');
+    const list = document.getElementById('cart-items');
+    const totalEl = document.getElementById('cart-total');
+    
+    if(count) {
+        const qty = cart.reduce((a,b)=>a+b.quantity,0);
+        count.innerText = qty;
+        count.style.display = qty > 0 ? 'block' : 'none';
+    }
+
+    if(list && totalEl) {
+        let total = 0;
+        if(cart.length === 0) {
+            list.innerHTML = '<div class="text-center p-3">Vacío</div>';
+        } else {
+            list.innerHTML = cart.map(i => {
+                total += i.price * i.quantity;
+                return `
+                <div class="d-flex justify-content-between mb-2 border-bottom border-secondary pb-2">
+                    <div>
+                        <small class="d-block text-white">${i.name}</small>
+                        <small class="text-muted">${i.quantity} x $${parseFloat(i.price).toLocaleString('es-CO')}</small>
+                    </div>
+                    <button onclick="removeFromCart(${i.id})" class="btn btn-sm text-danger"><i class="fa fa-trash"></i></button>
+                </div>`;
+            }).join('');
+        }
+        totalEl.innerText = total.toLocaleString('es-CO', {style:'currency', currency:'COP', minimumFractionDigits: 0});
+    }
+}
+
+// PAGOS (SOLUCIÓN)
+window.openPaymentModal = function() {
+    if(cart.length === 0) return alert("Tu garaje está vacío.");
+    
+    // Intentar obtener el modal de Bootstrap
+    const modalEl = document.getElementById('paymentModal');
+    if(modalEl && window.bootstrap) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        // Asignar evento al botón de pagar DENTRO del modal
+        const payBtn = modalEl.querySelector('.btn-success');
+        if(payBtn) {
+            payBtn.onclick = () => {
+                // Simulación de pasarela
+                payBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Conectando Banco...';
+                setTimeout(() => {
+                    alert("¡Pago Exitoso! (Simulación)");
+                    cart = [];
+                    updateCartUI();
+                    renderProducts(allProducts);
+                    modal.hide();
+                    payBtn.innerHTML = 'PAGAR AHORA';
+                }, 2000);
+            };
+        }
+    } else {
+        alert("Error cargando la pasarela de pagos.");
+    }
+}
+
+// Auth Check Helper
+function checkSession() {
+    const user = localStorage.getItem('user');
+    const authDiv = document.getElementById('auth-section');
+    if(user && authDiv) {
+        const u = JSON.parse(user);
+        authDiv.innerHTML = `<button onclick="localStorage.clear();location.reload()" class="btn btn-sm btn-outline-danger">Hola ${u.name.split(' ')[0]} (Salir)</button>`;
+    }
+}
 // ==========================================
 // 1. MAPA DE LUJO (LEAFLET)
 // ==========================================

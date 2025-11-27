@@ -3,28 +3,43 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { sendVerificationCode } = require('../services/emailService');
 
-// Almacenamiento temporal de códigos (En producción usar Redis, aquí usaremos Memoria)
+// Almacenamiento temporal (Memoria RAM)
 const pendingRegistrations = new Map();
 
-// 1. INICIAR REGISTRO (Validar y Enviar Código)
+// 1. INICIAR REGISTRO
 const initiateRegister = async (req, res) => {
     const { name, email, password, phone } = req.body;
 
+    // Validación básica de campos obligatorios en Backend
+    if (!name || !email || !password || !phone) {
+        return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
+    }
+
     try {
-        // A. Validar si ya existe el usuario
-        const [existing] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+        // A. Verificar si el correo YA existe en la BD
+        const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
         if (existing.length > 0) {
-            return res.status(400).json({ message: 'Este correo ya está registrado.' });
+            return res.status(400).json({ message: 'Este correo ya está registrado en el sistema.' });
         }
 
-        // B. Generar Código (6 dígitos)
+        // B. Verificar si el teléfono YA existe (Opcional, pero recomendado)
+        const [existingPhone] = await pool.query('SELECT id FROM users WHERE phone = ?', [phone]);
+        if (existingPhone.length > 0) {
+            return res.status(400).json({ message: 'Este número de teléfono ya está registrado.' });
+        }
+
+        // C. Generar Código
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         
-        // C. Enviar Correo (Si falla por dominio falso, salta al catch)
-        await sendVerificationCode(email, code);
+        // D. Enviar Correo
+        try {
+            await sendVerificationCode(email, code);
+        } catch (emailError) {
+            console.error("Error SMTP:", emailError);
+            return res.status(500).json({ message: 'Error enviando el correo. Verifica que la dirección sea real.' });
+        }
 
-        // D. Guardar datos temporalmente (Expira en 5 min)
-        // Encriptamos la contraseña ANTES de guardarla temporalmente para seguridad
+        // E. Guardar temporalmente (Hash password antes)
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -34,44 +49,44 @@ const initiateRegister = async (req, res) => {
             password: hashedPassword,
             phone,
             code,
-            expires: Date.now() + 5 * 60 * 1000 // 5 minutos
+            expires: Date.now() + 10 * 60 * 1000 // 10 minutos
         });
 
-        res.status(200).json({ message: 'Código enviado. Revisa tu correo.', email });
+        console.log(`✅ Registro iniciado para: ${email}`);
+        res.status(200).json({ message: 'Código enviado correctamente.', email });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: error.message || 'Error en el servidor' });
+        console.error("❌ Error en initiateRegister:", error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
 
-// 2. COMPLETAR REGISTRO (Verificar Código)
+// 2. VERIFICAR CÓDIGO Y CREAR USUARIO
 const verifyAndRegister = async (req, res) => {
     const { email, code } = req.body;
 
     const data = pendingRegistrations.get(email);
 
-    if (!data) return res.status(400).json({ message: 'Solicitud expirada o correo inválido.' });
+    if (!data) return res.status(400).json({ message: 'Solicitud no encontrada o expirada.' });
     if (Date.now() > data.expires) {
         pendingRegistrations.delete(email);
-        return res.status(400).json({ message: 'El código ha expirado. Intenta registrarte de nuevo.' });
+        return res.status(400).json({ message: 'El código ha expirado.' });
     }
-    if (data.code !== code) {
+    if (String(data.code) !== String(code)) {
         return res.status(400).json({ message: 'Código incorrecto.' });
     }
 
     try {
-        // Insertar en Base de Datos FINALMENTE
-        const [result] = await pool.query(
+        await pool.query(
             'INSERT INTO users (name, email, password, phone, role) VALUES (?, ?, ?, ?, ?)',
             [data.name, data.email, data.password, data.phone, 'client']
         );
 
-        pendingRegistrations.delete(email); // Limpiar memoria
-        res.status(201).json({ message: '¡Cuenta verificada y creada con éxito!' });
-
+        pendingRegistrations.delete(email);
+        res.status(201).json({ message: 'Usuario registrado exitosamente.' });
     } catch (error) {
-        res.status(500).json({ message: 'Error guardando usuario.' });
+        console.error(error);
+        res.status(500).json({ message: 'Error guardando en base de datos.' });
     }
 };
 
@@ -80,21 +95,21 @@ const login = async (req, res) => {
         const { email, password } = req.body;
         const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
         
-        if (users.length === 0) return res.status(400).json({ message: 'Credenciales inválidas' });
+        if (users.length === 0) return res.status(400).json({ message: 'Usuario no encontrado.' });
         
         const user = users[0];
         const validPass = await bcrypt.compare(password, user.password);
-        if (!validPass) return res.status(400).json({ message: 'Credenciales inválidas' });
+        if (!validPass) return res.status(400).json({ message: 'Contraseña incorrecta.' });
 
         const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         res.json({ 
-            message: 'Bienvenido',
+            message: 'Login exitoso',
             token, 
             user: { id: user.id, name: user.name, email: user.email, role: user.role } 
         });
     } catch (error) {
-        res.status(500).json({ message: 'Error en login' });
+        res.status(500).json({ message: 'Error en el servidor.' });
     }
 };
 
