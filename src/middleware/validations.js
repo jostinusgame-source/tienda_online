@@ -1,93 +1,79 @@
 const { body, validationResult } = require('express-validator');
 
-// --- HELPER PARA MANEJAR ERRORES ---
-// Si hay errores, detiene la petición y responde al frontend
 const handleErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        // Devolvemos solo el primer error para mantener la interfaz limpia
-        return res.status(400).json({ 
-            message: errors.array()[0].msg, 
-            errors: errors.array() 
-        });
+        return res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
     }
     next();
 };
 
-// --- LÓGICA DE VALIDACIÓN PERSONALIZADA ---
-
-// Reglas para Nombres Reales
+// --- VALIDACIÓN DE NOMBRE (MODO EXPERTO) ---
 const validateStrictName = (value) => {
-    if (!value) throw new Error('El nombre es obligatorio.');
+    const clean = value.trim();
+    // 1. Palabras: Mínimo 1, Máximo 3
+    const words = clean.split(/\s+/);
+    if (words.length < 1 || words.length > 3) throw new Error('El nombre debe tener entre 1 y 3 palabras.');
+
+    // 2. Palabras repetidas (Ej: "Juan Juan")
+    const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+    if (uniqueWords.size !== words.length) throw new Error('No repitas palabras en el nombre.');
+
+    const forbidden = ['jeje', 'jojo', 'jaja', 'admin', 'test', 'usuario', 'null'];
     
-    // Eliminar espacios extra
-    const cleanValue = value.trim();
-    const words = cleanValue.split(/\s+/);
-
-    // 1. Debe tener al menos nombre y apellido (2 palabras)
-    if (words.length < 2) {
-        throw new Error('Por favor ingresa tu nombre y apellido.');
-    }
-
-    // 2. Verificar longitud de cada palabra
     for (const word of words) {
-        if (word.length < 2) {
-            throw new Error(`La parte "${word}" es muy corta.`);
+        // 3. Caracteres permitidos (Solo letras y tildes)
+        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+$/.test(word)) throw new Error(`"${word}" contiene caracteres inválidos.`);
+        
+        // 4. Letras seguidas iguales (Ej: "Aanna", "Carllos" - permitimos ll/rr en español si se requiere, pero aquí estricto)
+        // Regex: Detecta cualquier letra que se repita inmediatamente (ej: aa, ee)
+        // Nota: Si quieres permitir "ll", ajusta el regex, pero pediste estricto.
+        if (/(.)\1/.test(word.toLowerCase()) && !['l','r','c'].includes(word.toLowerCase().match(/(.)\1/)[1])) {
+             throw new Error(`"${word}" tiene letras repetidas inválidas.`);
         }
-        // Solo letras (incluye tildes y ñ)
-        if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ]+$/.test(word)) {
-            throw new Error(`"${word}" contiene caracteres inválidos (solo letras).`);
-        }
+        
+        // 5. Palabras prohibidas
+        if (forbidden.includes(word.toLowerCase())) throw new Error(`"${word}" no parece un nombre real.`);
     }
+    return true;
+};
+
+// --- VALIDACIÓN DE PASSWORD (NIVEL BANCARIO) ---
+const validateStrictPass = (value) => {
+    if (value.length < 10) throw new Error('Mínimo 10 caracteres.');
+    if (/\s/.test(value)) throw new Error('Sin espacios en blanco.');
+    if (!/[A-Z]/.test(value)) throw new Error('Falta una mayúscula.');
+    if (!/[a-z]/.test(value)) throw new Error('Falta una minúscula.');
+    if (!/\d/.test(value)) throw new Error('Falta un número.');
+    if (!/[!@#$%^&*()\-_=+?]/.test(value)) throw new Error('Falta un símbolo especial.');
     
-    // 3. Evitar repetición excesiva de caracteres (ej: "Juaaan")
-    // Detecta si un carácter se repite 3 veces seguidas
-    const regexRepetidas = /(.)\1\1/; 
-    if (regexRepetidas.test(cleanValue)) {
-        throw new Error('El nombre tiene demasiadas letras repetidas consecutivas.');
-    }
+    // No repetir 3 veces seguidas (ej: aaa)
+    if (/(.)\1\1/.test(value)) throw new Error('Patrón inseguro (caracteres repetidos).');
     
     return true;
 };
 
-// --- EXPORTACIÓN DE VALIDADORES ---
-
-// 1. Registro de Usuario
 exports.validateRegister = [
     body('name').custom(validateStrictName),
-    body('email').isEmail().withMessage('El correo electrónico no es válido'),
-    body('password').isStrongPassword({
-        minLength: 8,
-        minLowercase: 1,
-        minUppercase: 1,
-        minNumbers: 1,
-        minSymbols: 1
-    }).withMessage('La contraseña debe tener: 8 caracteres, 1 mayúscula, 1 número y 1 símbolo.'),
-    // El teléfono se valida opcionalmente o se confía en el frontend (intl-tel-input)
-    handleErrors
-];
-
-// 2. Inicio de Sesión
-exports.validateLogin = [
     body('email').isEmail().withMessage('Email inválido'),
-    body('password').notEmpty().withMessage('Ingresa tu contraseña'),
+    body('password').custom(validateStrictPass),
     handleErrors
 ];
 
-// 3. Recuperación de Contraseña
+exports.validateLogin = [
+    body('email').isEmail(),
+    body('password').notEmpty(),
+    handleErrors
+];
+
 exports.validateResetPassword = [
-    body('newPassword').isLength({ min: 8 }).withMessage('La nueva contraseña es muy corta'),
+    body('newPassword').custom(validateStrictPass),
     handleErrors
 ];
 
-// 4. Gestión de Productos (¡CRUCIAL PARA EL CATÁLOGO!)
-// Si esta exportación falta, las rutas de productos fallan y la página no carga.
+// MANTENER ESTO PARA QUE EL CATÁLOGO NO FALLE
 exports.validateProduct = [
-    body('name').notEmpty().withMessage('El nombre del producto es obligatorio'),
-    body('price').isFloat({ min: 0.01 }).withMessage('El precio debe ser mayor a 0'),
-    body('stock').isInt({ min: 0 }).withMessage('El stock debe ser un número entero positivo'),
-    body('description').optional().isString(),
-    // Validación opcional de URL de imagen
-    body('image_url').optional().isString(), 
+    body('name').notEmpty(),
+    body('price').isNumeric(),
     handleErrors
 ];
