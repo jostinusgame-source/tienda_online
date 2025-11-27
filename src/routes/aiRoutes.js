@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-// Importamos el controlador (Asegúrate de que este archivo también exista, ver paso 2)
+// Importamos el controlador desde la carpeta superior
 const { chatWithConcierge } = require('../controllers/aiController');
 
-// Ruta POST para recibir mensajes del chat
+// Definir la ruta POST para el chat
 router.post('/chat', chatWithConcierge);
 
+// ¡ESTA LÍNEA ES VITAL! Sin esto, sale el error "got a Object"
 module.exports = router;

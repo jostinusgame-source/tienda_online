@@ -4,29 +4,29 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-// --- IMPORTAR RUTAS ---
+// Importar todas las rutas
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
-const aiRoutes = require('./routes/aiRoutes'); // <--- ¡AQUÍ CONECTAMOS A ENZO!
+const aiRoutes = require('./routes/aiRoutes'); // <--- Debe existir en src/routes/aiRoutes.js
 
 const app = express();
 
-// --- MIDDLEWARES ---
+// Middlewares
 app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
-// --- SERVIR FRONTEND (Página Web) ---
+// Servir Frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- DEFINIR RUTAS DE LA API ---
+// Definir Rutas de API
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/ai', aiRoutes); // <--- ¡AQUÍ ACTIVAMOS LA RUTA!
+app.use('/api/ai', aiRoutes); // <--- Aquí fallaba si el archivo estaba vacío
 
-// Ruta de prueba
+// Ruta Base
 app.get('/', (req, res) => {
     res.send('SpeedCollect API v1.0 - Online 🏎️');
 });
