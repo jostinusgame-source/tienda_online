@@ -1,86 +1,71 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns').promises;
 require('dotenv').config();
 
-// Configuración del transporte (Gmail o SMTP)
+// Configuración de Transporte (USAR APP PASSWORD DE GMAIL ES OBLIGATORIO)
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // O usa host/port si tienes otro proveedor
+    service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // Tu correo (ej: tienda@gmail.com)
-        pass: process.env.EMAIL_PASS  // TU "APP PASSWORD" (NO la normal)
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS // ¡SIN ESPACIOS!
+    },
+    tls: {
+        rejectUnauthorized: false // Ayuda en entornos como Render
     }
 });
 
-/**
- * Valida y clasifica el correo electrónico
- */
-const validarTipoCorreo = (email) => {
-    const dominio = email.split('@')[1].toLowerCase();
-    
-    // Listas de dominios
-    const mundiales = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'icloud.com'];
-    const esInstitucional = dominio.includes('.edu') || dominio.includes('unbosque') || dominio.includes('sena');
-
-    let tipo = 'Empresarial/Otro';
-    if (mundiales.includes(dominio)) tipo = 'Personal (Mundial)';
-    if (esInstitucional) tipo = 'Institucional/Educativo';
-
-    return { valido: true, tipo, dominio };
-};
-
-/**
- * Envía el correo genérico
- */
-const sendEmail = async (to, subject, htmlContent) => {
-    const validacion = validarTipoCorreo(to);
-    console.log(`📧 Enviando a: ${to} [Tipo: ${validacion.tipo}]`);
-
+// 1. Validar si el dominio existe (DNS MX Record)
+const verificarDominioReal = async (email) => {
+    const dominio = email.split('@')[1];
     try {
-        const info = await transporter.sendMail({
-            from: `"Tienda Colección" <${process.env.EMAIL_USER}>`,
-            to: to,
-            subject: subject,
-            html: htmlContent
-        });
-        console.log('✅ Correo enviado ID:', info.messageId);
-        return true;
+        const mxRecords = await dns.resolveMx(dominio);
+        return mxRecords && mxRecords.length > 0;
     } catch (error) {
-        console.error('❌ Error enviando correo:', error);
         return false;
     }
 };
 
-/**
- * Enviar Código de Verificación
- */
+// 2. Enviar Código de Verificación
 const sendVerificationCode = async (email, code) => {
+    // Primero validamos dominio real
+    const dominioValido = await verificarDominioReal(email);
+    if (!dominioValido) {
+        throw new Error("El dominio del correo no existe o no recibe emails.");
+    }
+
     const html = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #d9534f;">Verifica tu cuenta</h2>
-            <p>Gracias por registrarte. Usa el siguiente código para validar tu identidad:</p>
-            <h1 style="letter-spacing: 5px; background: #eee; padding: 10px; display: inline-block;">${code}</h1>
-            <p>Este código expira en 10 minutos.</p>
+    <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; background-color: #f4f4f4; padding: 20px; border-radius: 10px;">
+        <div style="background-color: #d90429; padding: 20px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0;">SPEEDCOLLECT</h1>
         </div>
+        <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; text-align: center;">
+            <h2 style="color: #333;">Verifica tu Identidad</h2>
+            <p style="color: #666; font-size: 16px;">Para completar tu registro, ingresa el siguiente código de seguridad. Este código expira en 5 minutos.</p>
+            
+            <div style="margin: 30px 0;">
+                <span style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #d90429; background: #eee; padding: 10px 20px; border-radius: 5px; border: 2px dashed #d90429;">
+                    ${code}
+                </span>
+            </div>
+            
+            <p style="font-size: 12px; color: #999;">Si no solicitaste este código, ignora este mensaje.</p>
+        </div>
+    </div>
     `;
-    return await sendEmail(email, 'Código de Verificación - Tienda Autos', html);
+
+    try {
+        await transporter.sendMail({
+            from: `"Seguridad SpeedCollect" <${process.env.EMAIL_USER}>`,
+            to: email,
+            subject: `🔐 Tu código es: ${code}`,
+            html: html
+        });
+        console.log(`✅ Código enviado a ${email}`);
+        return true;
+    } catch (error) {
+        console.error("❌ Error enviando email:", error);
+        throw new Error("Fallo al enviar el correo. Verifica tu dirección.");
+    }
 };
 
-/**
- * Enviar Ticket de Compra
- */
-const sendPurchaseTicket = async (email, orderData) => {
-    const html = `
-        <div style="font-family: Arial, sans-serif;">
-            <h1>¡Gracias por tu compra! 🚗</h1>
-            <p>Tu pedido #${orderData.id} ha sido confirmado.</p>
-            <h3>Total: $${orderData.total}</h3>
-            <p>Tus autos llegarán pronto a tu garaje.</p>
-        </div>
-    `;
-    return await sendEmail(email, 'Tu Ticket de Compra', html);
-};
-
-module.exports = {
-    validarTipoCorreo,
-    sendVerificationCode,
-    sendPurchaseTicket
-};
+module.exports = { sendVerificationCode };

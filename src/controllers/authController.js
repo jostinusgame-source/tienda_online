@@ -1,126 +1,101 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const emailService = require('../services/emailService');
-const db = require('../config/database'); // Necesario para updates
+const pool = require('../config/database');
+const { sendVerificationCode } = require('../services/emailService');
 
-const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+// Almacenamiento temporal de códigos (En producción usar Redis, aquí usaremos Memoria)
+const pendingRegistrations = new Map();
 
-// REGISTRO OPTIMIZADO: Elimina el await para velocidad
-exports.register = async (req, res) => {
+// 1. INICIAR REGISTRO (Validar y Enviar Código)
+const initiateRegister = async (req, res) => {
+    const { name, email, password, phone } = req.body;
+
     try {
-        const { name, email, password, phone } = req.body;
+        // A. Validar si ya existe el usuario
+        const [existing] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (existing.length > 0) {
+            return res.status(400).json({ message: 'Este correo ya está registrado.' });
+        }
 
-        const userExists = await User.findByEmail(email);
-        if (userExists) return res.status(400).json({ message: 'El correo ya está registrado.' });
+        // B. Generar Código (6 dígitos)
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // C. Enviar Correo (Si falla por dominio falso, salta al catch)
+        await sendVerificationCode(email, code);
 
+        // D. Guardar datos temporalmente (Expira en 5 min)
+        // Encriptamos la contraseña ANTES de guardarla temporalmente para seguridad
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        const code = generateCode();
-        const exp = new Date(Date.now() + 15 * 60000); // 15 min
 
-        await User.create({
-            name, email, phone, password: hashedPassword,
-            email_verification_code: code,
-            email_verification_expiration: exp
+        pendingRegistrations.set(email, {
+            name,
+            email,
+            password: hashedPassword,
+            phone,
+            code,
+            expires: Date.now() + 5 * 60 * 1000 // 5 minutos
         });
 
-        // ⚡ REGISTRO INSTANTÁNEO: Envía el correo en segundo plano (quita el bloqueo)
-        emailService.sendVerificationCode(email, code)
-            .catch(err => console.error("Error enviando correo (Background):", err));
-
-        res.status(201).json({ message: 'Usuario creado. Revisa tu correo.', email });
+        res.status(200).json({ message: 'Código enviado. Revisa tu correo.', email });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error interno.' });
+        res.status(500).json({ message: error.message || 'Error en el servidor' });
     }
 };
 
-exports.login = async (req, res) => {
+// 2. COMPLETAR REGISTRO (Verificar Código)
+const verifyAndRegister = async (req, res) => {
+    const { email, code } = req.body;
+
+    const data = pendingRegistrations.get(email);
+
+    if (!data) return res.status(400).json({ message: 'Solicitud expirada o correo inválido.' });
+    if (Date.now() > data.expires) {
+        pendingRegistrations.delete(email);
+        return res.status(400).json({ message: 'El código ha expirado. Intenta registrarte de nuevo.' });
+    }
+    if (data.code !== code) {
+        return res.status(400).json({ message: 'Código incorrecto.' });
+    }
+
+    try {
+        // Insertar en Base de Datos FINALMENTE
+        const [result] = await pool.query(
+            'INSERT INTO users (name, email, password, phone, role) VALUES (?, ?, ?, ?, ?)',
+            [data.name, data.email, data.password, data.phone, 'client']
+        );
+
+        pendingRegistrations.delete(email); // Limpiar memoria
+        res.status(201).json({ message: '¡Cuenta verificada y creada con éxito!' });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Error guardando usuario.' });
+    }
+};
+
+const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findByEmail(email);
-
-        if (!user) return res.status(401).json({ message: 'Credenciales inválidas.' });
+        const [users] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
         
-        if (!user.is_verified) {
-            return res.status(403).json({ 
-                message: 'Cuenta no verificada.', 
-                needsVerification: true, 
-                email: user.email 
-            });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(401).json({ message: 'Credenciales inválidas.' });
+        if (users.length === 0) return res.status(400).json({ message: 'Credenciales inválidas' });
+        
+        const user = users[0];
+        const validPass = await bcrypt.compare(password, user.password);
+        if (!validPass) return res.status(400).json({ message: 'Credenciales inválidas' });
 
         const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({ message: 'Login exitoso', token, user });
+
+        res.json({ 
+            message: 'Bienvenido',
+            token, 
+            user: { id: user.id, name: user.name, email: user.email, role: user.role } 
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Error en login.' });
+        res.status(500).json({ message: 'Error en login' });
     }
 };
 
-exports.verifyEmail = async (req, res) => {
-    try {
-        const { email, code } = req.body;
-        const user = await User.findByEmail(email);
-        
-        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
-        
-        if (String(user.email_verification_code) !== String(code)) {
-            return res.status(400).json({ message: 'Código incorrecto.' });
-        }
-        
-        await db.execute('UPDATE users SET is_verified = 1, email_verification_code = NULL WHERE id = ?', [user.id]);
-        res.json({ message: 'Verificado.' });
-    } catch (error) { res.status(500).json({ message: 'Error verificando.' }); }
-};
-
-// RECUPERACIÓN DE CONTRASEÑA (Lógica Real)
-exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body;
-        const user = await User.findByEmail(email);
-        
-        if (!user) return res.status(404).json({ message: 'Si el correo existe, recibirás un código.' });
-
-        const recoveryCode = generateCode();
-        
-        // Guardamos el código en la base de datos
-        await db.execute('UPDATE users SET recovery_code = ? WHERE email = ?', [recoveryCode, email]);
-
-        // Enviar correo de recuperación
-        emailService.sendVerificationCode(email, recoveryCode)
-            .catch(e => console.error("Error correo recuperación:", e));
-
-        // RESPUESTA EXITOSA
-        res.json({ message: 'Código enviado a tu correo.' });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error procesando solicitud.' });
-    }
-};
-
-// CAMBIAR CONTRASEÑA
-exports.resetPassword = async (req, res) => {
-    try {
-        const { email, code, newPassword } = req.body;
-        const user = await User.findByEmail(email);
-        
-        if (!user) return res.status(404).json({ message: 'Usuario no encontrado.' });
-        if (String(user.recovery_code) !== String(code)) return res.status(400).json({ message: 'Código inválido.' });
-
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(newPassword, salt);
-
-        await db.execute('UPDATE users SET password = ?, recovery_code = NULL WHERE id = ?', [hash, user.id]);
-        
-        res.json({ message: 'Contraseña actualizada.' });
-
-    } catch (error) {
-        res.status(500).json({ message: 'Error actualizando contraseña.' });
-    }
-};
+module.exports = { initiateRegister, verifyAndRegister, login };
