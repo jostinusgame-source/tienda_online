@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+
+// Importar controladores (Asegúrate que productController.js tenga estas funciones exportadas)
 const { 
     getAllProducts, 
     getProductById, 
@@ -7,17 +9,22 @@ const {
     updateProduct, 
     deleteProduct 
 } = require('../controllers/productController');
+
+// Importar middlewares
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const { validateProduct } = require('../middleware/validations');
 
-// Rutas Públicas
+// --- Definir Rutas ---
+
+// Públicas
 router.get('/', getAllProducts);
 router.get('/:id', getProductById);
 
-// Rutas Privadas (Solo Admin)
+// Privadas (Solo Admin)
+// Nota: Si alguna variable (como validateProduct) no existe, fallará. 
+// Asegúrate de que validations.js exporte validateProduct.
 router.post('/', protect, adminOnly, validateProduct, createProduct);
 router.put('/:id', protect, adminOnly, validateProduct, updateProduct);
 router.delete('/:id', protect, adminOnly, deleteProduct);
 
-// --- IMPORTANTE: Exportar el router ---
 module.exports = router;
