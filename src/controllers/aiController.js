@@ -2,7 +2,6 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
 // Inicializar el cliente de Gemini
-// Usamos una verificación para evitar que la app explote si falta la clave al inicio
 const genAI = process.env.GEMINI_API_KEY 
     ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) 
     : null;
@@ -20,10 +19,10 @@ exports.chatWithConcierge = async (req, res) => {
         }
 
         // 2. Configuración del Modelo
-        // Usamos 'gemini-1.5-flash' porque es el modelo más rápido y eficiente para chats en vivo
+        // Usamos 'gemini-1.5-flash' porque es el estándar actual de la API.
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        // 3. Personalidad del Agente (System Prompt)
+        // 3. Personalidad del Agente
         const prompt = `
             Actúa como "Enzo", el consultor experto y concierge de la tienda exclusiva "SpeedCollect Official Dealer".
             
@@ -39,18 +38,16 @@ exports.chatWithConcierge = async (req, res) => {
             Respuesta de Enzo:
         `;
 
-        // 4. Generar la respuesta con Gemini
+        // 4. Generar la respuesta
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
 
-        // 5. Enviar respuesta al Frontend
+        // 5. Enviar respuesta
         res.json({ reply: text });
 
     } catch (error) {
         console.error("❌ Error de comunicación con Gemini:", error);
-        
-        // Mensaje de error elegante para el usuario
         res.status(500).json({ 
             reply: "Mis disculpas, estoy supervisando una entrega especial. Por favor, intenta preguntarme de nuevo en un momento." 
         });

@@ -1,14 +1,26 @@
+console.log("🟡 [INICIO] Arrancando servidor...");
+
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-// Importar todas las rutas
+// Importar rutas con logs de verificación
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
-const aiRoutes = require('./routes/aiRoutes'); // <--- Debe existir en src/routes/aiRoutes.js
+
+console.log("🟡 [INICIO] Intentando requerir aiRoutes...");
+const aiRoutes = require('./routes/aiRoutes');
+console.log("🟡 [INICIO] aiRoutes cargado. Tipo de dato:", typeof aiRoutes);
+
+// --- DETECTOR DE ERROR ---
+// Si esto imprime "object" y no "function", ahí está el problema.
+if (typeof aiRoutes !== 'function') {
+    console.error("🔴 [ERROR FATAL] aiRoutes no es una función (Router). Es:", aiRoutes);
+    console.error("   Esto significa que module.exports no funcionó en aiRoutes.js");
+}
 
 const app = express();
 
@@ -17,16 +29,16 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan('dev'));
 
-// Servir Frontend
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Definir Rutas de API
+// Rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/ai', aiRoutes); // <--- Aquí fallaba si el archivo estaba vacío
 
-// Ruta Base
+// Aquí es donde explota si aiRoutes está mal
+app.use('/api/ai', aiRoutes);
+
 app.get('/', (req, res) => {
     res.send('SpeedCollect API v1.0 - Online 🏎️');
 });

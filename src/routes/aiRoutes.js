@@ -1,13 +1,22 @@
+console.log("🔵 [DEBUG] Cargando archivo aiRoutes.js...");
+
 const express = require('express');
 const router = express.Router();
 
-// 1. Importar el controlador
-// (Verifica que la ruta '../controllers/aiController' sea correcta)
+// Importar controlador
 const { chatWithConcierge } = require('../controllers/aiController');
 
-// 2. Definir la ruta
+// Verificar si el controlador cargó bien
+if (!chatWithConcierge) {
+    console.error("🔴 [DEBUG] ¡CUIDADO! chatWithConcierge es undefined. Revisa aiController.js");
+} else {
+    console.log("🔵 [DEBUG] Controlador cargado correctamente.");
+}
+
+// Definir ruta
 router.post('/chat', chatWithConcierge);
 
-// 3. ¡IMPORTANTE! Exportar el router
-// Si falta esta línea, el servidor falla con el error "got a Object"
+console.log("🔵 [DEBUG] Exportando router...");
+
+// Exportación
 module.exports = router;
