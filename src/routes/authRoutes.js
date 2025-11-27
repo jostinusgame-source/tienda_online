@@ -25,10 +25,10 @@ router.post('/register', validateRegister, register);
 // 2. Login
 router.post('/login', validateLogin, login);
 
-// 3. Verificación (¡AQUÍ estaba el error antes si verifyEmail era undefined!)
+// 3. Verificación
 router.post('/verify', verifyEmail);
 
-// 4. Recuperación (Opcionales, pero definidas para no romper)
+// 4. Recuperación
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', validateResetPassword, resetPassword);
 
