@@ -1,12 +1,96 @@
-.card-img-top {
-    height: 200px;
-    object-fit: contain;
-    padding: 10px;
+:root {
+    --ferrari-red: #D40000;
+    --black: #000000;
+    --dark-gray: #111111;
+    --text-gray: #888888;
 }
-.product-card {
-    transition: transform 0.2s;
+
+body {
+    background-color: var(--black);
+    font-family: 'Montserrat', sans-serif;
+    color: white;
 }
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+
+/* Tipografía */
+.ls-2 { letter-spacing: 2px; }
+.text-small { font-size: 0.85rem; font-weight: 600; }
+.text-gray { color: var(--text-gray); }
+
+.brand-title { font-size: 0.9rem; font-weight: 800; line-height: 1; letter-spacing: 1px; }
+.brand-subtitle { font-size: 0.7rem; color: var(--text-gray); letter-spacing: 1px; }
+
+/* Navbar */
+.navbar-nav .nav-link { color: white !important; transition: color 0.3s; }
+.navbar-nav .nav-link:hover { color: var(--ferrari-red) !important; }
+
+/* Hero */
+.bg-light-gray { background-color: #f0f0f0; }
+.hero-img { max-width: 80%; filter: drop-shadow(0 20px 30px rgba(0,0,0,0.3)); transition: 0.5s; }
+.hero-img:hover { transform: scale(1.05); }
+
+/* Botones */
+.btn-ferrari {
+    color: white; font-weight: 700; font-size: 0.9rem; letter-spacing: 1px;
+    display: inline-flex; align-items: center; transition: 0.3s; text-decoration: none;
 }
+.btn-ferrari:hover { color: var(--ferrari-red); }
+
+/* Cards */
+.product-card { background-color: var(--dark-gray); border: none; transition: 0.3s; height: 100%; }
+.product-card:hover { transform: translateY(-5px); }
+.card-img-wrap { background: #1a1a1a; height: 250px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.card-img-wrap img { max-width: 90%; max-height: 90%; object-fit: contain; transition: 0.5s; }
+.product-card:hover img { transform: scale(1.1); }
+.badge-stock { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; background: white; color: black; padding: 3px 8px; font-weight: 700; }
+.product-info { padding: 20px; }
+.product-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
+.product-price { color: var(--ferrari-red); font-weight: 600; font-size: 1rem; }
+.btn-add-cart { background: transparent; border: 1px solid white; color: white; width: 100%; padding: 10px; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; margin-top: 15px; transition: 0.3s; }
+.btn-add-cart:hover { background: white; color: black; }
+
+/* Divider */
+.divider-red {
+    width: 50px;
+    height: 3px;
+    background-color: var(--ferrari-red);
+    margin-top: 15px;
+}
+
+/* --- ESTILOS DEL CHAT (WIDGET FLOTANTE) --- */
+.btn-ai-float {
+    position: fixed; bottom: 30px; right: 30px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: var(--ferrari-red); color: white; border: none;
+    box-shadow: 0 5px 20px rgba(212, 0, 0, 0.4);
+    font-size: 1.5rem; z-index: 1000; transition: 0.3s;
+    display: flex; align-items: center; justify-content: center;
+}
+.btn-ai-float:hover { transform: scale(1.1); }
+
+.ai-chat-container {
+    position: fixed; bottom: 100px; right: 30px;
+    width: 350px; height: 500px;
+    background-color: #1a1a1a; border: 1px solid #333;
+    border-radius: 15px; display: flex; flex-direction: column;
+    z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    overflow: hidden;
+}
+
+.ai-header {
+    padding: 15px; background: var(--ferrari-red); color: white;
+    font-weight: bold; display: flex; justify-content: space-between;
+    align-items: center;
+}
+
+.ai-body {
+    flex-grow: 1; padding: 15px; overflow-y: auto;
+    font-size: 0.9rem; display: flex; flex-direction: column; gap: 10px;
+}
+
+.ai-msg { padding: 10px 15px; border-radius: 10px; max-width: 80%; line-height: 1.4; }
+.ai-msg-bot { background-color: #333; color: white; align-self: flex-start; border-bottom-left-radius: 0; }
+.ai-msg-user { background-color: white; color: black; align-self: flex-end; border-bottom-right-radius: 0; }
+
+.ai-footer { padding: 10px; border-top: 1px solid #333; display: flex; gap: 10px; background: #111; }
+.ai-footer input { flex-grow: 1; background: #222; border: 1px solid #444; color: white; padding: 8px 12px; border-radius: 20px; outline: none; }
+.ai-footer button { background: var(--ferrari-red); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
