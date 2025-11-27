@@ -19,5 +19,5 @@ router.post('/', protect, adminOnly, validateProduct, createProduct);
 router.put('/:id', protect, adminOnly, validateProduct, updateProduct);
 router.delete('/:id', protect, adminOnly, deleteProduct);
 
-// --- ¡ESTA LÍNEA ES LA QUE FALTABA! ---
+// --- IMPORTANTE: Exportar el router ---
 module.exports = router;

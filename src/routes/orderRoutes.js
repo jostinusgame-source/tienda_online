@@ -9,5 +9,5 @@ router.post('/', protect, createOrder);
 // Ver mis órdenes
 router.get('/my-orders', protect, getMyOrders);
 
-// --- ¡ESTA LÍNEA ES LA QUE FALTABA! ---
+// --- IMPORTANTE: Exportar el router ---
 module.exports = router;
