@@ -1,12 +1,35 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, verifyEmail, forgotPassword, resetPassword } = require('../controllers/authController');
-const { validateRegister, validateLogin, validateResetPassword } = require('../middleware/validations');
 
+// Importamos TODAS las funciones del controlador
+const { 
+    register, 
+    login, 
+    verifyEmail, 
+    forgotPassword, 
+    resetPassword 
+} = require('../controllers/authController');
+
+// Importamos las validaciones
+const { 
+    validateRegister, 
+    validateLogin,
+    validateResetPassword
+} = require('../middleware/validations');
+
+// --- Definir Rutas ---
+
+// 1. Registro
 router.post('/register', validateRegister, register);
-router.post('/verify', verifyEmail); // Endpoint para verificar el código
+
+// 2. Login
 router.post('/login', validateLogin, login);
-router.post('/forgot-password', forgotPassword); // Solicitar código
-router.post('/reset-password', validateResetPassword, resetPassword); // Enviar código y pass nueva
+
+// 3. Verificación (¡AQUÍ estaba el error antes si verifyEmail era undefined!)
+router.post('/verify', verifyEmail);
+
+// 4. Recuperación (Opcionales, pero definidas para no romper)
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', validateResetPassword, resetPassword);
 
 module.exports = router;
