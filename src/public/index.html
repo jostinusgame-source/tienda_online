@@ -6,13 +6,12 @@
     <title>SpeedCollect | Official Dealer</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;600;800&family=Montserrat:wght@300;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-black text-light">
 
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top navbar-dark glass-nav">
         <div class="container">
             <a class="navbar-brand fst-italic fw-bold text-uppercase" href="#">
@@ -23,7 +22,7 @@
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <ul class="navbar-nav align-items-center gap-3">
-                    <li class="nav-item"><a class="nav-link" href="#about">Legado</a></li> <li class="nav-item"><a class="nav-link active" href="#showroom">Showroom</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#showroom">Showroom</a></li>
                     <li class="nav-item"><a class="nav-link" href="#locations">Sedes</a></li>
                     <li class="nav-item position-relative">
                         <a class="nav-link" href="#" onclick="openPaymentModal()">
@@ -39,142 +38,99 @@
         </div>
     </nav>
 
+    <!-- HERO -->
     <header class="vh-100 position-relative overflow-hidden d-flex align-items-center justify-content-center">
-        <div id="heroCarousel" class="carousel slide carousel-fade w-100 h-100" data-bs-ride="carousel">
-            <div class="carousel-inner h-100">
-                <div class="carousel-item active h-100" data-bs-interval="5000">
-                    <div class="overlay-hero"></div>
-                    <img src="https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=1920&q=80" class="d-block w-100 h-100 object-fit-cover" alt="Lamborghini">
-                    <div class="carousel-caption d-none d-md-block text-start mb-5 pb-5">
-                        <h1 class="display-1 fw-bold text-uppercase fst-italic slide-in-left">Ingeniería <span class="text-danger">Italiana</span></h1>
-                        <p class="lead fs-3 fade-in-up">Colección 2025. Escala 1:18. Detalles obsesivos.</p>
-                        <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 mt-3 hover-scale">VER GARAJE</a>
-                    </div>
+        <div class="overlay-hero"></div>
+        <img src="https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=1920&q=80" class="d-block w-100 h-100 object-fit-cover position-absolute" alt="Lamborghini">
+        <div class="container position-relative z-2">
+            <div class="row">
+                <div class="col-md-8">
+                    <h1 class="display-1 fw-bold text-uppercase fst-italic animate__animated animate__fadeInLeft">Ingeniería <span class="text-danger">Italiana</span></h1>
+                    <p class="lead fs-3 animate__animated animate__fadeInUp animate__delay-1s">Colección 2025. Escala 1:18. Detalles obsesivos.</p>
+                    <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 mt-3 hover-scale animate__animated animate__fadeInUp animate__delay-2s">VER GARAJE</a>
                 </div>
-                </div>
+            </div>
         </div>
     </header>
 
-    <section id="about" class="py-5 bg-dark position-relative">
-        <div class="container py-5">
-            <div class="row align-items-center g-5">
-                <div class="col-lg-6">
-                    <h2 class="display-5 fw-bold text-uppercase mb-4">Nuestro <span class="text-danger">Legado</span></h2>
-                    <div class="mb-4">
-                        <h4 class="text-white fst-italic"><i class="fa-solid fa-eye text-danger me-2"></i> Visión</h4>
-                        <p class="text-muted">Ser la referencia mundial en coleccionismo automotriz, conectando la pasión por la ingeniería con la exclusividad del arte a escala y la moda de alta velocidad.</p>
-                    </div>
-                    <div>
-                        <h4 class="text-white fst-italic"><i class="fa-solid fa-bullseye text-danger me-2"></i> Misión</h4>
-                        <p class="text-muted">Ofrecer piezas únicas que trascienden el tiempo. No vendemos juguetes; entregamos historia, adrenalina encapsulada y estilo de vida para quienes entienden que la velocidad es una forma de arte.</p>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="row g-2">
-                        <div class="col-6"><img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=500&q=60" class="img-fluid rounded border border-secondary opacity-75"></div>
-                        <div class="col-6"><img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=500&q=60" class="img-fluid rounded border border-secondary opacity-75 mt-4"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="py-5 bg-black position-relative overflow-hidden">
-        <div class="container py-5">
-             <div class="text-center mb-4">
-                <span class="text-danger fw-bold ls-2">TECNOLOGÍA</span>
-                <h2 class="fw-bold text-uppercase">Inspección <span class="text-outline">360°</span></h2>
-             </div>
-             <div class="card bg-transparent border-0 mx-auto" style="max-width: 800px;">
-                <model-viewer 
-                    src="https://modelviewer.dev/shared-assets/models/Astronaut.glb" 
-                    alt="Modelo 3D"
-                    auto-rotate camera-controls shadow-intensity="1"
-                    style="width: 100%; height: 400px; background-color: #1a1a1a; border-radius: 20px;">
-                </model-viewer>
-            </div>
-        </div>
-    </section>
-
+    <!-- SHOWROOM -->
     <section id="showroom" class="py-5 bg-dark">
         <div class="container">
-            <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold text-uppercase">Inventario <span class="text-danger">Selecto</span></h2>
-                <div class="divider mx-auto"></div>
+            <div class="d-flex justify-content-between align-items-center mb-5">
+                <h2 class="display-5 fw-bold text-uppercase mb-0">Inventario <span class="text-danger">Selecto</span></h2>
+                <div class="input-group w-25">
+                    <span class="input-group-text bg-transparent border-secondary text-light"><i class="fa fa-search"></i></span>
+                    <input type="text" id="search-input" class="form-control bg-transparent border-secondary text-light" placeholder="Buscar...">
+                </div>
             </div>
 
-            <div class="row mb-4 g-3">
-                <div class="col-md-8">
-                    <div class="btn-group flex-wrap" role="group" id="category-filters">
-                        <button type="button" class="btn btn-outline-secondary active" data-filter="all">Todos</button>
-                        <button type="button" class="btn btn-outline-secondary" data-filter="Autos">🏎️ Autos</button>
-                        <button type="button" class="btn btn-outline-secondary" data-filter="Camisetas">👕 Moda</button>
-                        <button type="button" class="btn btn-outline-secondary" data-filter="Raros">💎 Rarezas</button>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="input-group glass-input">
-                        <span class="input-group-text bg-transparent border-secondary text-light"><i class="fa fa-search"></i></span>
-                        <input type="text" id="search-input" class="form-control bg-transparent border-secondary text-light" placeholder="Buscar modelo...">
-                    </div>
+            <!-- Filtros -->
+            <div class="mb-4">
+                <div class="btn-group" role="group" id="category-filters">
+                    <button type="button" class="btn btn-outline-light active" data-filter="all">Todos</button>
+                    <button type="button" class="btn btn-outline-light" data-filter="Autos">Autos</button>
+                    <button type="button" class="btn btn-outline-light" data-filter="Camisetas">Moda</button>
+                    <button type="button" class="btn btn-outline-light" data-filter="Raros">Raros</button>
                 </div>
             </div>
 
             <div id="loader" class="text-center py-5">
                 <div class="spinner-border text-danger" role="status"></div>
-                <p class="mt-2 text-muted">Abriendo garaje...</p>
+                <p class="mt-2 text-muted">Cargando...</p>
             </div>
 
+            <!-- Grid de Productos -->
             <div id="products-container" class="row g-4 d-none">
-                </div>
-        </div>
-    </section>
-
-    <section id="locations" class="py-5 bg-black">
-        <div class="container">
-            <h2 class="text-uppercase fw-bold mb-4"><i class="fa-solid fa-map-location-dot text-danger"></i> Global HQ</h2>
-            <div class="row g-0 rounded-4 overflow-hidden shadow-lg border border-secondary">
-                <div class="col-lg-4 bg-dark p-4">
-                    <h4 class="fw-bold mb-3">Bogotá Experience Center</h4>
-                    <p class="text-muted"><i class="fa-solid fa-location-dot me-2 text-danger"></i> Zona Rosa, Cra 11 #82-01</p>
-                    <hr class="border-secondary">
-                    <h5 class="fw-bold mb-3">Horarios VIP</h5>
-                    <ul class="list-unstyled text-muted small">
-                        <li class="mb-2 d-flex justify-content-between"><span>Lun - Vie:</span> <span class="text-white">10:00 AM - 8:00 PM</span></li>
-                        <li class="d-flex justify-content-between"><span>Sab - Dom:</span> <span class="text-white">10:00 AM - 6:00 PM</span></li>
-                    </ul>
-                </div>
-                <div class="col-lg-8">
-                    <div id="map" style="height: 400px; width: 100%;"></div>
-                </div>
+                <!-- JS inyecta aquí -->
             </div>
         </div>
     </section>
 
-    <div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1050;">
-        <div id="chat-window" class="card bg-dark border-secondary shadow-lg d-none" style="width: 320px; height: 450px;">
-            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
-                <small class="fw-bold"><i class="fa-solid fa-user-tie"></i> Enzo (Concierge AI)</small>
-                <button onclick="toggleChat()" class="btn btn-sm text-white"><i class="fa fa-times"></i></button>
-            </div>
-            <div class="card-body overflow-auto small bg-black" id="chat-body">
-                <div class="text-muted text-center mt-5">
-                    <p>Bienvenuto. Soy Enzo.</p>
-                    <p>Puedo ayudarte con detalles técnicos, precios o recomendaciones de estilo.</p>
+    <!-- MODAL DE PRODUCTO (3D & INFO) -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-black text-white border-secondary shadow-lg">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title fw-bold text-uppercase text-danger" id="modal-p-name">Nombre</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-            </div>
-            <div class="card-footer bg-dark border-top border-secondary p-2">
-                <div class="input-group input-group-sm">
-                    <input type="text" id="chat-input" class="form-control bg-black text-white border-secondary" placeholder="Pregúntale a Enzo...">
-                    <button class="btn btn-danger" onclick="sendChat()"><i class="fa fa-paper-plane"></i></button>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Visor -->
+                        <div class="col-lg-8 mb-3" id="visual-container"></div>
+                        
+                        <!-- Info -->
+                        <div class="col-lg-4">
+                            <h2 class="text-danger fw-bold" id="modal-p-price">$0.00</h2>
+                            <p class="text-warning small mb-3" id="modal-p-stock">Stock: 0</p>
+                            <p class="text-light text-muted" id="modal-p-desc">Descripción...</p>
+                            
+                            <hr class="border-secondary">
+                            
+                            <!-- Reseñas -->
+                            <h6 class="text-uppercase fw-bold text-muted mb-3">Reseñas</h6>
+                            <div id="reviewsContainer" class="mb-3 custom-scrollbar" style="max-height: 200px; overflow-y: auto;"></div>
+                            
+                            <!-- Formulario -->
+                            <form id="reviewForm" class="mt-3">
+                                <div class="input-group input-group-sm mb-2">
+                                    <select class="form-select bg-dark text-white border-secondary" id="review-rating">
+                                        <option value="5">⭐⭐⭐⭐⭐</option>
+                                        <option value="4">⭐⭐⭐⭐</option>
+                                        <option value="3">⭐⭐⭐</option>
+                                    </select>
+                                </div>
+                                <textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Escribe tu opinión..."></textarea>
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">Publicar</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-        <button onclick="toggleChat()" class="btn btn-danger btn-lg rounded-circle shadow-lg hover-scale" style="width: 60px; height: 60px;">
-            <i class="fa-solid fa-comments fa-xl"></i>
-        </button>
     </div>
 
+    <!-- MODAL DE PAGO (CARRITO) -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border border-secondary">
@@ -185,78 +141,40 @@
                 <div class="modal-body">
                     <div id="cart-items"></div>
                     <div class="d-flex justify-content-between fw-bold fs-4 mt-3 pt-3 border-top border-secondary">
-                        <span>TOTAL (USD):</span>
+                        <span>TOTAL:</span>
                         <span id="cart-total" class="text-danger">$0.00</span>
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-success fw-bold w-100" onclick="checkout()">PROCEDER AL PAGO</button>
+                    <button type="button" class="btn btn-success fw-bold w-100" onclick="checkout()">PAGAR Y GENERAR RECIBO</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="productModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content bg-black text-white border border-secondary">
-                <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold text-uppercase" id="modal-p-name">Nombre Producto</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+    <!-- MODAL ALERTA DE LOGIN -->
+    <div class="modal fade" id="loginRequiredModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-danger text-center p-4">
+                <div class="mb-3">
+                    <i class="fa-solid fa-lock fa-3x text-danger animate__animated animate__pulse animate__infinite"></i>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <img id="modal-p-img" src="" class="img-fluid rounded border border-secondary shadow" alt="Producto">
-                        </div>
-                        <div class="col-md-6">
-                            <h2 class="text-danger fw-bold" id="modal-p-price">$0.00 USD</h2>
-                            <p class="text-muted" id="modal-p-desc">Descripción...</p>
-                            <p class="small text-warning" id="modal-p-stock">Stock: 0</p>
-                            <button class="btn btn-outline-light w-100 mb-3" onclick="addToCartFromModal()">
-                                <i class="fa-solid fa-cart-plus"></i> Añadir al Carrito
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <hr class="border-secondary my-4">
-
-                    <div class="reviews-section">
-                        <h5 class="border-start border-4 border-danger ps-2 mb-3">Opiniones de Coleccionistas</h5>
-                        
-                        <div id="review-form-container" class="bg-dark p-3 rounded mb-3 border border-secondary">
-                            <h6 class="small text-muted mb-2">Deja tu opinión</h6>
-                            <form id="reviewForm">
-                                <input type="hidden" id="modal-p-id"> <div class="d-flex gap-2 mb-2">
-                                    <select id="review-rating" class="form-select form-select-sm bg-black text-white border-secondary" style="width: auto;">
-                                        <option value="5">⭐⭐⭐⭐⭐ Excelente</option>
-                                        <option value="4">⭐⭐⭐⭐ Muy bueno</option>
-                                        <option value="3">⭐⭐⭐ Regular</option>
-                                        <option value="2">⭐⭐ Malo</option>
-                                        <option value="1">⭐ Terrible</option>
-                                    </select>
-                                </div>
-                                <textarea id="review-comment" class="form-control bg-black text-white border-secondary mb-2" placeholder="¿Qué opinas de la calidad?" rows="2" required></textarea>
-                                <button type="submit" class="btn btn-sm btn-danger">Publicar Reseña</button>
-                            </form>
-                        </div>
-                        <div id="login-warning" class="alert alert-secondary py-1 small d-none">
-                            <i class="fa fa-lock"></i> Inicia sesión para dejar una reseña.
-                        </div>
-
-                        <div id="reviewsContainer" class="mt-3" style="max-height: 200px; overflow-y: auto;">
-                            <p class="text-muted small">Cargando opiniones...</p>
-                        </div>
-                    </div>
+                <h4 class="text-white fw-bold">Acceso VIP Requerido</h4>
+                <p class="text-muted">Inicia sesión para acceder a compras y reseñas exclusivas.</p>
+                <div class="d-flex justify-content-center gap-3 mt-3">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+                    <a href="login.html" class="btn btn-danger fw-bold px-4">Entrar</a>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- PDF Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
