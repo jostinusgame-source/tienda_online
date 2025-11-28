@@ -1,64 +1,113 @@
 const pool = require('../config/database');
 
-// 1. OBTENER PRODUCTOS (CON RESEÑAS)
+// --- PÚBLICO ---
+
 const getProducts = async (req, res) => {
     try {
+        // Seleccionamos TODOS los campos, incluyendo categoría
         const [products] = await pool.query('SELECT * FROM products');
         
-        // Agregar reseñas a cada producto
-        for(let p of products) {
-            const [reviews] = await pool.query('SELECT * FROM reviews WHERE product_id = ? ORDER BY created_at DESC', [p.id]);
-            p.reviews = reviews;
-        }
+        // NOTA: No cargamos las reseñas aquí para no hacer lento el catálogo principal.
+        // Las reseñas se cargarán cuando el usuario haga clic en un producto específico.
         
         res.json(products);
-    } catch (e) {
-        res.status(500).json({message: 'Error al cargar productos'});
+    } catch (e) { 
+        console.error(e);
+        res.status(500).json({message: 'Error al obtener productos'}); 
     }
 };
 
-// 2. CREAR PEDIDO (BAJA DE STOCK REAL)
 const createOrder = async (req, res) => {
-    const { cart, email, total } = req.body;
+    const { cart, email, total, paymentMethod } = req.body;
     const connection = await pool.getConnection();
     
     try {
         await connection.beginTransaction();
 
-        // Verificar y descontar stock
+        // 1. Validar Stock Estricto (Bloqueo de filas para evitar sobreventa)
         for (const item of cart) {
-            const [rows] = await connection.query('SELECT stock FROM products WHERE id = ? FOR UPDATE', [item.id]);
-            if (rows.length === 0 || rows[0].stock < item.quantity) {
-                throw new Error(`Stock insuficiente para ${item.name}`);
+            const [rows] = await connection.query('SELECT stock, name FROM products WHERE id = ? FOR UPDATE', [item.id]);
+            
+            if (rows.length === 0) throw new Error(`Producto no existe: ${item.id}`);
+            if (rows[0].stock < item.quantity) {
+                throw new Error(`Stock insuficiente para ${rows[0].name}. Quedan: ${rows[0].stock}`);
             }
             
+            // 2. Descontar Stock
             await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [item.quantity, item.id]);
         }
 
-        // Registrar Orden
-        await connection.query('INSERT INTO orders (user_email, total) VALUES (?, ?)', [email, total]);
+        // 3. Crear Orden
+        const [order] = await connection.query(
+            'INSERT INTO orders (user_email, total, payment_method, status) VALUES (?, ?, ?, ?)',
+            [email, total, paymentMethod, 'pending']
+        );
+
+        // 4. Crear Items de Orden
+        for (const item of cart) {
+            await connection.query(
+                'INSERT INTO order_items (order_id, product_name, quantity, price) VALUES (?, ?, ?, ?)',
+                [order.insertId, item.name, item.quantity, item.price]
+            );
+        }
 
         await connection.commit();
-        res.json({ message: 'Compra exitosa', success: true });
+        res.json({ success: true, orderId: order.insertId });
 
     } catch (error) {
         await connection.rollback();
-        res.status(400).json({ message: error.message, success: false });
+        console.error("Error en createOrder:", error.message);
+        res.status(400).json({ success: false, message: error.message });
     } finally {
         connection.release();
     }
 };
 
-// 3. AGREGAR RESEÑA
-const addReview = async (req, res) => {
-    const { productId, userName, rating, comment } = req.body;
+// --- ADMIN ---
+
+const getDashboardStats = async (req, res) => {
     try {
-        await pool.query('INSERT INTO reviews (product_id, user_name, rating, comment) VALUES (?, ?, ?, ?)', 
-            [productId, userName, rating, comment]);
-        res.json({ message: 'Reseña agregada' });
-    } catch (e) {
-        res.status(500).json({ message: 'Error al guardar reseña' });
+        const [sales] = await pool.query('SELECT SUM(total) as total_sales, COUNT(*) as count FROM orders');
+        const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
+        const [products] = await pool.query('SELECT COUNT(*) as count FROM products');
+        
+        res.json({
+            sales: sales[0].total_sales || 0,
+            orders: sales[0].count,
+            users: users[0].count,
+            products: products[0].count
+        });
+    } catch (e) { 
+        res.status(500).json({message: 'Error obteniendo estadísticas'}); 
     }
 };
 
-module.exports = { getProducts, createOrder, addReview };
+const manageProducts = async (req, res) => {
+    const { action, id, data } = req.body; // action: create, update, delete
+    
+    try {
+        if(action === 'delete') {
+            await pool.query('DELETE FROM products WHERE id = ?', [id]);
+        
+        } else if (action === 'create') {
+            // Asegúrate de enviar 'category' desde el frontend (Camiseta, Auto, Raro)
+            await pool.query(
+                'INSERT INTO products (name, description, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?, ?)',
+                [data.name, data.description, data.price, data.stock, data.category || 'General', data.image_url]
+            );
+        
+        } else if (action === 'update') {
+            // ✅ CORREGIDO: Ahora actualiza TODOS los campos nuevos
+            await pool.query(
+                'UPDATE products SET name=?, description=?, price=?, stock=?, category=?, image_url=? WHERE id=?',
+                [data.name, data.description, data.price, data.stock, data.category, data.image_url, id]
+            );
+        }
+        res.json({message: 'Operación exitosa'});
+    } catch(e) { 
+        console.error(e);
+        res.status(500).json({message: 'Error en gestión de productos'}); 
+    }
+};
+
+module.exports = { getProducts, createOrder, getDashboardStats, manageProducts };

@@ -2,18 +2,16 @@ const db = require('../config/database');
 
 class User {
     static async create(userData) {
-        // Agregamos 'phone' a la destructuración
-        const { name, email, password, role, phone, email_verification_code, email_verification_expiration } = userData;
-        const userRole = role || 'customer';
+        // Ya no necesitamos códigos de verificación
+        const { name, email, password, role, phone } = userData;
+        const userRole = role || 'client';
         
-        // Query actualizado
         const query = `
-            INSERT INTO users (name, email, password, role, phone, email_verification_code, email_verification_expiration, is_verified) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, false)
+            INSERT INTO users (name, email, password, role, phone) 
+            VALUES (?, ?, ?, ?, ?)
         `;
         
-        // Array de valores actualizado
-        const [result] = await db.execute(query, [name, email, password, userRole, phone, email_verification_code, email_verification_expiration]);
+        const [result] = await db.execute(query, [name, email, password, userRole, phone]);
         return result.insertId;
     }
 
@@ -24,7 +22,7 @@ class User {
     }
 
     static async findById(id) {
-        const query = 'SELECT id, name, email, phone, role, created_at FROM users WHERE id = ?';
+        const query = 'SELECT id, name, email, phone, role FROM users WHERE id = ?';
         const [rows] = await db.execute(query, [id]);
         return rows[0];
     }

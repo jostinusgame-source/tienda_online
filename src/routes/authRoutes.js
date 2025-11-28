@@ -1,18 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { initiateRegister, verifyAndRegister, login, getAllUsers, deleteUser } = require('../controllers/authController');
+const authController = require('../controllers/authController');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-// Simulación de middleware para este ejemplo (En producción usa uno real)
-const authMiddleware = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if(!token) return res.status(403).json({message: 'No token'});
-    next();
-};
+// Rutas Públicas
+router.post('/register', authController.register); // Registro directo
+router.post('/login', authController.login);
 
-router.post('/register', initiateRegister);
-router.post('/verify', verifyAndRegister);
-router.post('/login', login);
-router.get('/users', authMiddleware, getAllUsers);
-router.delete('/users/:id', authMiddleware, deleteUser);
+// Rutas Privadas (Admin)
+router.get('/users', protect, adminOnly, authController.getAllUsers);
+router.delete('/users/:id', protect, adminOnly, authController.deleteUser);
 
 module.exports = router;

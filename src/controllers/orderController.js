@@ -1,28 +1,29 @@
-const Order = require('../models/Order');
+const pool = require('../config/database');
 
-// 1. Crear Orden
+// 1. Crear Orden (Redirigimos al storeController para mantener la lógica de Stock)
 exports.createOrder = async (req, res) => {
-    try {
-        // items debe ser un array [{product_id, quantity, price}]
-        const { items, total } = req.body; 
-        const userId = req.user.id; // Viene del token
-
-        const orderId = await Order.create(userId, total, items);
-        
-        res.status(201).json({ message: 'Orden creada exitosamente', orderId });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error al procesar la orden' });
-    }
+    // Recomendamos usar storeController.createOrder porque maneja transacciones
+    res.status(307).redirect('/api/store/order'); 
 };
 
-// 2. Ver mis órdenes
+// 2. Ver mis órdenes (Historial del Usuario)
 exports.getMyOrders = async (req, res) => {
     try {
-        const orders = await Order.findByUser(req.user.id);
+        const userId = req.user.id; // Viene del token JWT
+        // Buscamos las órdenes por el email del usuario (así lo guardamos en storeController)
+        const userEmail = req.user.email; 
+
+        const query = `
+            SELECT id, total, status, created_at, payment_method 
+            FROM orders 
+            WHERE user_email = ? 
+            ORDER BY created_at DESC
+        `;
+        
+        const [orders] = await pool.query(query, [userEmail]);
         res.json(orders);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error al obtener órdenes' });
+        res.status(500).json({ message: 'Error al obtener tus órdenes' });
     }
 };

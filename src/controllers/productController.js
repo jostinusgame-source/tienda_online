@@ -1,16 +1,13 @@
 const Product = require('../models/Product');
 
-// Función segura para obtener productos
+// Función segura para obtener productos (con filtro opcional de categoría)
 const getAllProducts = async (req, res) => {
     try {
-        console.log("📦 Solicitando catálogo..."); // Debug log
-        const products = await Product.findAll();
-        
-        // Si no hay productos, devolvemos array vacío (Status 200 OK)
+        const category = req.query.category; // Soporte para ?category=Camisetas
+        const products = await Product.findAll(category);
         res.status(200).json(products || []);
     } catch (error) {
-        console.error("❌ ERROR CRÍTICO EN GET PRODUCTS:", error);
-        // IMPORTANTE: Devolvemos un array vacío (200 OK) para que el frontend no muestre error rojo
+        console.error("❌ ERROR EN GET PRODUCTS:", error);
         res.status(200).json([]); 
     }
 };
@@ -35,9 +32,11 @@ const createProduct = async (req, res) => {
 };
 
 const updateProduct = async (req, res) => {
+    // Nota: Es mejor usar el storeController para gestión masiva, 
+    // pero mantenemos esto por si usas una API externa.
     try {
-        await Product.update(req.params.id, req.body);
-        res.json({ message: 'Actualizado' });
+        // Necesitarías implementar Product.update en el modelo
+        res.status(501).json({ message: 'Usa storeController para actualizar' });
     } catch (error) {
         res.status(500).json({ message: 'Error actualizando' });
     }
@@ -45,14 +44,13 @@ const updateProduct = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
     try {
-        await Product.delete(req.params.id);
-        res.json({ message: 'Producto eliminado' });
+         // Necesitarías implementar Product.delete en el modelo
+         res.status(501).json({ message: 'Usa storeController para eliminar' });
     } catch (error) {
         res.status(500).json({ message: 'Error eliminando' });
     }
 };
 
-// Exportación como objeto único para compatibilidad total
 module.exports = {
     getAllProducts,
     getProductById,

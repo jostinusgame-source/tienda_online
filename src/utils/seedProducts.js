@@ -1,9 +1,10 @@
 const mysql = require('mysql2/promise');
 const path = require('path');
+// Ajusta la ruta del .env según tu estructura de carpetas
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 async function seedProducts() {
-    console.log('🔌 Conectando para reconstruir base de datos...');
+    console.log('🚧 Iniciando REINICIO total de la Base de Datos SpeedCollect...');
     
     const dbConfig = {
         host: process.env.DB_HOST,
@@ -16,151 +17,151 @@ async function seedProducts() {
     try {
         const connection = await mysql.createConnection(dbConfig);
         
-        // 1. LIMPIEZA Y CREACIÓN DE TABLAS (Orden correcto por llaves foráneas)
-        await connection.execute('DROP TABLE IF EXISTS reviews');
-        await connection.execute('DROP TABLE IF EXISTS order_items');
-        await connection.execute('DROP TABLE IF EXISTS orders');
-        await connection.execute('DROP TABLE IF EXISTS products');
-        // No borramos users para no perder tu admin, pero aseguramos la tabla
+        // 1. ELIMINAR TABLAS ANTIGUAS (Orden correcto por las llaves foráneas)
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+        const tables = ['reviews', 'order_items', 'orders', 'products', 'users', 'settings', 'audit_logs'];
+        for (const table of tables) {
+            await connection.execute(`DROP TABLE IF EXISTS ${table}`);
+        }
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+
+        console.log('🗑️ Tablas antiguas eliminadas.');
+
+        // 2. CREAR TABLAS NUEVAS
+
+        // A. Usuarios (Sin verificación, registro directo)
         await connection.execute(`
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE users (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(255),
-                email VARCHAR(255) UNIQUE,
-                password VARCHAR(255),
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
                 phone VARCHAR(50),
                 role VARCHAR(20) DEFAULT 'client',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
-        // Tabla Productos
+        // B. Productos (Con Categoría y Precio Decimal para USD)
         await connection.execute(`
             CREATE TABLE products (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
                 description TEXT,
-                price DECIMAL(15, 2) NOT NULL,
+                price DECIMAL(10, 2) NOT NULL, -- USD
                 stock INT NOT NULL DEFAULT 0,
+                category VARCHAR(100), -- 'Autos', 'Camisetas', 'Raros'
                 image_url VARCHAR(500),
                 model_url VARCHAR(500), 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
-        // Tabla Reseñas
-        await connection.execute(`
-            CREATE TABLE reviews (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                product_id INT,
-                user_name VARCHAR(100),
-                rating INT,
-                comment TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-            )
-        `);
-
-        // Tabla Pedidos
+        // C. Pedidos
         await connection.execute(`
             CREATE TABLE orders (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_email VARCHAR(255),
-                total DECIMAL(15, 2),
-                status VARCHAR(50) DEFAULT 'completed',
+                total DECIMAL(10, 2),
+                status VARCHAR(50) DEFAULT 'pending',
+                payment_method VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
-        // 2. INSERTAR CATÁLOGO ROBUSTO (Imágenes estables)
+        // D. Items del Pedido
+        await connection.execute(`
+            CREATE TABLE order_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                order_id INT,
+                product_name VARCHAR(255),
+                quantity INT,
+                price DECIMAL(10, 2),
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+            )
+        `);
+
+        // E. Reseñas (Reviews)
+        await connection.execute(`
+            CREATE TABLE reviews (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                product_id INT NOT NULL,
+                rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            )
+        `);
+
+        console.log('wd Estructura de tablas creada.');
+
+        // 3. INSERTAR DATOS INICIALES (CATÁLOGO EN USD)
+        
         const products = [
+            // --- CATEGORÍA: AUTOS ---
             {
-                name: 'Ferrari LaFerrari',
-                description: 'Híbrido V12. La cumbre tecnológica de Maranello.',
-                price: 4500000, stock: 3,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/LaFerrari_in_Beverly_Hills_%287614%29.jpg',
+                name: 'Ferrari LaFerrari Aperta',
+                description: 'La máxima expresión híbrida de Maranello. Escala 1:18. Detalles en fibra de carbono real.',
+                price: 450.00, stock: 5, category: 'Autos',
+                image_url: 'https://images.unsplash.com/photo-1592198084033-aade902d1aae?auto=format&fit=crop&w=800',
                 model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Ferrari/glTF/Ferrari.gltf'
             },
             {
-                name: 'Bugatti Chiron',
-                description: 'El coche de producción más rápido y lujoso del mundo.',
-                price: 3200000, stock: 2,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/6/62/Bugatti_Chiron_%2836559710091%29.jpg',
-                model_url: ''
-            },
-            {
-                name: 'Lamborghini Aventador SVJ',
-                description: 'Aerodinámica activa y V12 atmosférico puro.',
-                price: 850000, stock: 5,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Lamborghini_Aventador_SVJ_Jota_%28front%29.jpg/1200px-Lamborghini_Aventador_SVJ_Jota_%28front%29.jpg',
-                model_url: ''
-            },
-            {
                 name: 'Porsche 911 GT3 RS',
-                description: 'Un coche de carreras legal para la calle.',
-                price: 350000, stock: 10,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/2/23/Porsche_991_GT3_RS_Front.jpg',
-                model_url: 'https://modelviewer.dev/shared-assets/models/Porsche911GT2.glb'
+                description: 'El rey de los circuitos. Acabado en Lizard Green con jaula antivuelco.',
+                price: 280.00, stock: 10, category: 'Autos',
+                image_url: 'https://images.unsplash.com/photo-1503376763036-066120622c74?auto=format&fit=crop&w=800'
             },
             {
-                name: 'McLaren P1',
-                description: 'Hypercar híbrido diseñado para el circuito.',
-                price: 1800000, stock: 4,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/c/cd/McLaren_P1.jpg',
-                model_url: ''
+                name: 'Bugatti Chiron Super Sport',
+                description: '300+ mph. La ingeniería llevada al límite. Edición Carbono Azul.',
+                price: 550.00, stock: 2, category: 'Autos',
+                image_url: 'https://images.unsplash.com/photo-1600712242805-5f786716a5d7?auto=format&fit=crop&w=800'
+            },
+            
+            // --- CATEGORÍA: CAMISETAS (NUEVO) ---
+            {
+                name: 'T-Shirt Scuderia Ferrari 2025',
+                description: 'Algodón Pima de alta calidad. Edición Oficial GP de Monza. Color Rosso Corsa.',
+                price: 85.00, stock: 50, category: 'Camisetas',
+                image_url: 'https://images.unsplash.com/photo-1580820027731-01185f096277?auto=format&fit=crop&w=800'
             },
             {
-                name: 'Koenigsegg Agera RS',
-                description: 'Record mundial de velocidad máxima (277 mph).',
-                price: 5000000, stock: 1,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Koenigsegg_Agera_RS_Naraya_at_GIMS_2018_01.jpg',
-                model_url: ''
+                name: 'Hoodie Porsche 911 Turbo Vintage',
+                description: 'Sudadera negra con estampado clásico del Porsche 930 Turbo. Corte Oversize.',
+                price: 120.00, stock: 30, category: 'Camisetas',
+                image_url: 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?auto=format&fit=crop&w=800'
+            },
+
+            // --- CATEGORÍA: RAROS / COLECCIONABLES (NUEVO) ---
+            {
+                name: 'Casco Ayrton Senna 1994 (Replica)',
+                description: 'Replica escala 1:1 certificada. Pintura a mano. Incluye vitrina de exhibición.',
+                price: 1500.00, stock: 1, category: 'Raros',
+                image_url: 'https://m.media-amazon.com/images/I/71u+1qL+Q+L._AC_SX679_.jpg'
             },
             {
-                name: 'Pagani Huayra',
-                description: 'Arte sobre ruedas con aerodinámica activa.',
-                price: 2600000, stock: 2,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/0/03/Pagani_Huayra_Geneva_Motor_Show_2011.jpg',
-                model_url: ''
-            },
-            {
-                name: 'Aston Martin Valkyrie',
-                description: 'Fórmula 1 con matrícula.',
-                price: 3500000, stock: 1,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/6/65/Aston_Martin_Valkyrie_GIMS_2019_Le_Grand-Saconnex_GIMS0027.jpg',
-                model_url: ''
-            },
-            {
-                name: 'Ford GT',
-                description: 'El renacimiento de la leyenda de Le Mans.',
-                price: 600000, stock: 6,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/2018_Ford_GT_3.5.jpg',
-                model_url: ''
-            },
-            {
-                name: 'Shelby Cobra 427',
-                description: 'Clásico americano. Potencia bruta sin filtros.',
-                price: 1500000, stock: 3,
-                image_url: 'https://upload.wikimedia.org/wikipedia/commons/7/75/1966_Shelby_Cobra_427_S-C.jpg',
-                model_url: ''
+                name: 'Neumático F1 Usado (Pirelli Soft)',
+                description: 'Neumático real usado en pruebas de invierno 2023. Con certificado de autenticidad.',
+                price: 3200.00, stock: 1, category: 'Raros',
+                image_url: 'https://images.unsplash.com/photo-1578855673620-74e94b29ce45?auto=format&fit=crop&w=800'
             }
         ];
 
         for (const p of products) {
-            const [res] = await connection.execute(
-                'INSERT INTO products (name, description, price, stock, image_url, model_url) VALUES (?, ?, ?, ?, ?, ?)',
-                [p.name, p.description, p.price, p.stock, p.image_url, p.model_url || null]
+            await connection.execute(
+                'INSERT INTO products (name, description, price, stock, category, image_url, model_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [p.name, p.description, p.price, p.stock, p.category, p.image_url, p.model_url || null]
             );
-            
-            // Insertar reseñas falsas iniciales
-            await connection.execute('INSERT INTO reviews (product_id, user_name, rating, comment) VALUES (?, ?, ?, ?)', 
-                [res.insertId, 'Usuario Verificado', 5, '¡Increíble máquina! El detalle es impresionante.']);
         }
 
-        console.log('🏁 Base de datos reconstruida con éxito.');
+        console.log('🏁 ¡ÉXITO! Base de datos actualizada con USD, Camisetas y Productos Raros.');
         await connection.end();
-    } catch (e) {
-        console.error('❌ Error:', e);
+
+    } catch (error) {
+        console.error('❌ Error Fatal:', error);
     }
 }
 
