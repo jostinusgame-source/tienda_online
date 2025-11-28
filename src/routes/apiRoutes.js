@@ -1,35 +1,37 @@
 const express = require('express');
 const router = express.Router();
 
-// Importar Sub-Rutas
-const authRoutes = require('./authRoutes');
-const productRoutes = require('./productRoutes'); // Rutas Admin de productos
-const orderRoutes = require('./orderRoutes');
-const aiRoutes = require('./aiRoutes');
-
-// Importar Controladores Sueltos (Para rutas simples)
+// Importar Controladores
+const authController = require('../controllers/authController');
 const storeController = require('../controllers/storeController');
 const reviewController = require('../controllers/reviewController');
+const { chatWithConcierge } = require('../controllers/aiController');
 const authMiddleware = require('../middleware/authMiddleware');
 
-// 1. RUTAS DE AUTENTICACIÓN (/api/auth/...)
-router.use('/auth', authRoutes);
+// ==========================
+// 1. RUTAS DE TIENDA (Públicas) - ESTAS ERAN LAS QUE FALLABAN
+// ==========================
+router.get('/store/products', storeController.getProducts); // Esta carga el catálogo
+router.get('/products/:productId/reviews', reviewController.getProductReviews); // Esta carga reseñas
 
-// 2. RUTAS DE TIENDA PÚBLICA (/api/store/...)
-router.get('/store/products', storeController.getProducts);
+// ==========================
+// 2. RUTAS DE AUTH (Públicas)
+// ==========================
+router.post('/auth/register', authController.register);
+router.post('/auth/login', authController.login);
+
+// ==========================
+// 3. RUTAS PROTEGIDAS (Requieren Login)
+// ==========================
+// Comprar
 router.post('/store/order', authMiddleware.protect, storeController.createOrder);
-
-// 3. RUTAS DE GESTIÓN DE PRODUCTOS (ADMIN) (/api/products/...)
-router.use('/products', productRoutes);
-
-// 4. RUTAS DE PEDIDOS USUARIO (/api/orders/...)
-router.use('/orders', orderRoutes);
-
-// 5. RUTAS DE IA (/api/ai/...)
-router.use('/ai', aiRoutes);
-
-// 6. RUTAS DE RESEÑAS (/api/...)
-router.get('/products/:productId/reviews', reviewController.getProductReviews);
+// Publicar Reseña
 router.post('/reviews', authMiddleware.protect, reviewController.addReview);
+// Chat IA
+router.post('/ai/chat', chatWithConcierge);
+
+// Admin (Opcional)
+router.get('/auth/users', authMiddleware.protect, authMiddleware.adminOnly, authController.getAllUsers);
+router.delete('/auth/users/:id', authMiddleware.protect, authMiddleware.adminOnly, authController.deleteUser);
 
 module.exports = router;
