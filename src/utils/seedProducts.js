@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 async function seedProducts() {
-    console.log('🔌 Conectando para actualización masiva...');
+    console.log('🔌 Conectando para reconstruir base de datos...');
     
     const dbConfig = {
         host: process.env.DB_HOST,
@@ -16,8 +16,25 @@ async function seedProducts() {
     try {
         const connection = await mysql.createConnection(dbConfig);
         
-        // Reiniciar tabla para datos limpios
+        // 1. LIMPIEZA Y CREACIÓN DE TABLAS (Orden correcto por llaves foráneas)
+        await connection.execute('DROP TABLE IF EXISTS reviews');
+        await connection.execute('DROP TABLE IF EXISTS order_items');
+        await connection.execute('DROP TABLE IF EXISTS orders');
         await connection.execute('DROP TABLE IF EXISTS products');
+        // No borramos users para no perder tu admin, pero aseguramos la tabla
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255),
+                email VARCHAR(255) UNIQUE,
+                password VARCHAR(255),
+                phone VARCHAR(50),
+                role VARCHAR(20) DEFAULT 'client',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Tabla Productos
         await connection.execute(`
             CREATE TABLE products (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -31,190 +48,116 @@ async function seedProducts() {
             )
         `);
 
-        // CATÁLOGO DE LUJO (20 AUTOS)
+        // Tabla Reseñas
+        await connection.execute(`
+            CREATE TABLE reviews (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                product_id INT,
+                user_name VARCHAR(100),
+                rating INT,
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            )
+        `);
+
+        // Tabla Pedidos
+        await connection.execute(`
+            CREATE TABLE orders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_email VARCHAR(255),
+                total DECIMAL(15, 2),
+                status VARCHAR(50) DEFAULT 'completed',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // 2. INSERTAR CATÁLOGO ROBUSTO (Imágenes estables)
         const products = [
-            // FERRARI
             {
-                name: 'Ferrari LaFerrari Aperta',
-                description: 'La joya híbrida de Maranello. 963 CV a cielo abierto.',
-                price: 4500000.00,
-                stock: 3,
-                image_url: 'https://images.unsplash.com/photo-1592198084033-aade902d1aae?auto=format&fit=crop&w=800',
+                name: 'Ferrari LaFerrari',
+                description: 'Híbrido V12. La cumbre tecnológica de Maranello.',
+                price: 4500000, stock: 3,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/e/e5/LaFerrari_in_Beverly_Hills_%287614%29.jpg',
                 model_url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Ferrari/glTF/Ferrari.gltf'
             },
             {
-                name: 'Ferrari F40 Legacy',
-                description: 'El último auto aprobado por Enzo Ferrari. Puro turbo clásico.',
-                price: 2100000.00,
-                stock: 1,
-                image_url: 'https://images.unsplash.com/photo-1627454819213-f77e6826dc6a?auto=format&fit=crop&w=800',
+                name: 'Bugatti Chiron',
+                description: 'El coche de producción más rápido y lujoso del mundo.',
+                price: 3200000, stock: 2,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/6/62/Bugatti_Chiron_%2836559710091%29.jpg',
                 model_url: ''
             },
-            {
-                name: 'Ferrari 488 Pista',
-                description: 'Adrenalina pura derivada de las carreras GT.',
-                price: 650000.00,
-                stock: 5,
-                image_url: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-            
-            // LAMBORGHINI
             {
                 name: 'Lamborghini Aventador SVJ',
-                description: 'El rey de Nürburgring. V12 atmosférico indomable.',
-                price: 850000.00,
-                stock: 4,
-                image_url: 'https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=800',
+                description: 'Aerodinámica activa y V12 atmosférico puro.',
+                price: 850000, stock: 5,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Lamborghini_Aventador_SVJ_Jota_%28front%29.jpg/1200px-Lamborghini_Aventador_SVJ_Jota_%28front%29.jpg',
                 model_url: ''
             },
-            {
-                name: 'Lamborghini Huracán STO',
-                description: 'Un coche de carreras homologado para la calle.',
-                price: 450000.00,
-                stock: 6,
-                image_url: 'https://images.unsplash.com/photo-1566473965997-3de9c817e938?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-            {
-                name: 'Lamborghini Countach LPI 800',
-                description: 'El renacimiento de una leyenda ochentera.',
-                price: 3200000.00,
-                stock: 2,
-                image_url: 'https://images.unsplash.com/photo-1610887226105-0219c637a445?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-
-            // PORSCHE
             {
                 name: 'Porsche 911 GT3 RS',
-                description: 'Precisión quirúrgica alemana. Alerón activo DRS.',
-                price: 380000.00,
-                stock: 8,
-                image_url: 'https://images.unsplash.com/photo-1503376763036-066120622c74?auto=format&fit=crop&w=800',
+                description: 'Un coche de carreras legal para la calle.',
+                price: 350000, stock: 10,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/2/23/Porsche_991_GT3_RS_Front.jpg',
                 model_url: 'https://modelviewer.dev/shared-assets/models/Porsche911GT2.glb'
             },
             {
-                name: 'Porsche 918 Spyder',
-                description: 'Hiperauto híbrido. Tecnología del futuro, hoy.',
-                price: 1800000.00,
-                stock: 2,
-                image_url: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-
-            // BUGATTI
-            {
-                name: 'Bugatti Chiron Pur Sport',
-                description: '1500 CV sintonizados para las curvas, no solo rectas.',
-                price: 4200000.00,
-                stock: 1,
-                image_url: 'https://images.unsplash.com/photo-1600712242805-5f786716a5d7?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-            {
-                name: 'Bugatti Divo',
-                description: 'Carrocería coachbuilt limitada. Solo para elegidos.',
-                price: 5800000.00,
-                stock: 1,
-                image_url: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-
-            // MCLAREN
-            {
                 name: 'McLaren P1',
-                description: 'Aerodinámica activa extrema y modo carrera.',
-                price: 2400000.00,
-                stock: 3,
-                image_url: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=800',
+                description: 'Hypercar híbrido diseñado para el circuito.',
+                price: 1800000, stock: 4,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/c/cd/McLaren_P1.jpg',
                 model_url: ''
             },
             {
-                name: 'McLaren 720S Spider',
-                description: 'Aceleración que desafía la física.',
-                price: 320000.00,
-                stock: 5,
-                image_url: 'https://images.unsplash.com/photo-1621135802920-133df287f89c?auto=format&fit=crop&w=800',
+                name: 'Koenigsegg Agera RS',
+                description: 'Record mundial de velocidad máxima (277 mph).',
+                price: 5000000, stock: 1,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/5/52/Koenigsegg_Agera_RS_Naraya_at_GIMS_2018_01.jpg',
                 model_url: ''
             },
-
-            // CLÁSICOS Y ESPECIALES
             {
-                name: 'Shelby Cobra 427 S/C',
-                description: 'El músculo americano original. Sin ayudas, solo tú y el motor.',
-                price: 1500000.00,
-                stock: 2,
-                image_url: 'https://images.unsplash.com/photo-1566008885218-90abf9200ddb?auto=format&fit=crop&w=800',
+                name: 'Pagani Huayra',
+                description: 'Arte sobre ruedas con aerodinámica activa.',
+                price: 2600000, stock: 2,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/0/03/Pagani_Huayra_Geneva_Motor_Show_2011.jpg',
                 model_url: ''
             },
             {
                 name: 'Aston Martin Valkyrie',
-                description: 'Un F1 con matrícula. Diseño de Adrian Newey.',
-                price: 3500000.00,
-                stock: 1,
-                image_url: 'https://images.unsplash.com/photo-1605816988069-424a1b870636?auto=format&fit=crop&w=800',
+                description: 'Fórmula 1 con matrícula.',
+                price: 3500000, stock: 1,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/6/65/Aston_Martin_Valkyrie_GIMS_2019_Le_Grand-Saconnex_GIMS0027.jpg',
                 model_url: ''
             },
             {
-                name: 'Pagani Huayra Roadster',
-                description: 'Arte sobre ruedas. Fibra de carbono y titanio.',
-                price: 2900000.00,
-                stock: 1,
-                image_url: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=800',
+                name: 'Ford GT',
+                description: 'El renacimiento de la leyenda de Le Mans.',
+                price: 600000, stock: 6,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/c/c2/2018_Ford_GT_3.5.jpg',
                 model_url: ''
             },
             {
-                name: 'Koenigsegg Jesko Absolut',
-                description: 'Diseñado para romper la barrera de las 300 mph.',
-                price: 4100000.00,
-                stock: 1,
-                image_url: 'https://images.unsplash.com/photo-1634547903823-389369c43d78?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-            {
-                name: 'Nissan GT-R Nismo',
-                description: 'Godzilla. El asesino de gigantes tecnológico.',
-                price: 220000.00,
-                stock: 10,
-                image_url: 'https://images.unsplash.com/photo-1604164448130-d1df213c64eb?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-            {
-                name: 'Audi R8 V10 Performance',
-                description: 'El superdeportivo usable todos los días.',
-                price: 190000.00,
-                stock: 7,
-                image_url: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-             {
-                name: 'Mercedes-AMG GT Black Series',
-                description: 'El depredador del asfalto con cigüeñal plano.',
-                price: 480000.00,
-                stock: 3,
-                image_url: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=800',
-                model_url: ''
-            },
-            {
-                name: 'Ford GT Heritage Edition',
-                description: 'Nacido en Le Mans, criado para la carretera.',
-                price: 950000.00,
-                stock: 2,
-                image_url: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800',
+                name: 'Shelby Cobra 427',
+                description: 'Clásico americano. Potencia bruta sin filtros.',
+                price: 1500000, stock: 3,
+                image_url: 'https://upload.wikimedia.org/wikipedia/commons/7/75/1966_Shelby_Cobra_427_S-C.jpg',
                 model_url: ''
             }
         ];
 
         for (const p of products) {
-            await connection.execute(
+            const [res] = await connection.execute(
                 'INSERT INTO products (name, description, price, stock, image_url, model_url) VALUES (?, ?, ?, ?, ?, ?)',
                 [p.name, p.description, p.price, p.stock, p.image_url, p.model_url || null]
             );
-            console.log(`✅ ${p.name}`);
+            
+            // Insertar reseñas falsas iniciales
+            await connection.execute('INSERT INTO reviews (product_id, user_name, rating, comment) VALUES (?, ?, ?, ?)', 
+                [res.insertId, 'Usuario Verificado', 5, '¡Increíble máquina! El detalle es impresionante.']);
         }
 
-        console.log('🏁 Catálogo reconstruido (20 Autos).');
+        console.log('🏁 Base de datos reconstruida con éxito.');
         await connection.end();
     } catch (e) {
         console.error('❌ Error:', e);
