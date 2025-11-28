@@ -100,7 +100,25 @@ async function seedProducts() {
         // 3. INSERTAR DATOS INICIALES (CATÁLOGO EN USD)
         
         const products = [
+
+            
             // --- CATEGORÍA: AUTOS ---
+
+            {
+                name: 'Ferrari LaFerrari',
+                description: 'Híbrido legendario. Escala 1:18.',
+                price: 450.00, stock: 5, category: 'Autos',
+                image_url: 'https://images.unsplash.com/photo-1592198084033-aade902d1aae?w=800',
+                // URL DE SKETCHFAB (Embed)
+                model_url: 'https://sketchfab.com/models/2f778f5664da4449a05b225964894e63' 
+            },
+            {
+                name: 'Porsche 911 GT3 RS',
+                description: 'Circuitos puros.',
+                price: 280.00, stock: 10, category: 'Autos',
+                image_url: 'https://images.unsplash.com/photo-1503376763036-066120622c74?w=800',
+                model_url: 'https://sketchfab.com/models/d0d0f50974a4411186e2467d020d5754' 
+            },
             {
                 name: 'Ferrari LaFerrari Aperta',
                 description: 'La máxima expresión híbrida de Maranello. Escala 1:18. Detalles en fibra de carbono real.',

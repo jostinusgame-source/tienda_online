@@ -4,11 +4,8 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-// Importar rutas
-const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const aiRoutes = require('./routes/aiRoutes');
+// IMPORTANTE: Importamos el archivo maestro de rutas que creamos antes
+const apiRoutes = require('./routes/apiRoutes'); 
 
 const app = express();
 
@@ -18,11 +15,8 @@ app.use(cors());
 app.use(morgan('dev'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rutas API
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/ai', aiRoutes);
+// RUTAS (Aquí estaba el error 404, ahora usamos la ruta maestra)
+app.use('/api', apiRoutes);
 
 // Ruta base
 app.get('/', (req, res) => {
@@ -32,7 +26,7 @@ app.get('/', (req, res) => {
 // Manejo de errores
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    res.status(500).json({ message: 'Error interno del servidor', error: err.message });
 });
 
 const PORT = process.env.PORT || 3000;
