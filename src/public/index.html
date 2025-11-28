@@ -3,90 +3,504 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpeedCollect | Official Dealer</title>
+    <title>SpeedCollect | Coleccionables Premium</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="bg-black text-light">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Russo+One&display=swap" rel="stylesheet">
 
-    <!-- NAVBAR -->
+    <style>
+        :root {
+            --primary-red: #D40000;
+            --dark-bg: #0a0a0a;
+            --glass: rgba(20, 20, 20, 0.85);
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Títulos Deportivos */
+        h1, h2, h3, .brand-font {
+            font-family: 'Russo One', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- 1. Navbar Glassmorphism --- */
+        .glass-nav {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .nav-link {
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #ddd !important;
+            position: relative;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary-red) !important;
+        }
+        .nav-link::after {
+            content: '';
+            display: block;
+            width: 0;
+            height: 2px;
+            background: var(--primary-red);
+            transition: width .3s;
+        }
+        .nav-link:hover::after { width: 100%; }
+
+        /* --- 2. Hero 3D Section --- */
+        #hero-section {
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+            display: flex;
+            align-items: center;
+        }
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            pointer-events: none; /* Permite rotar el 3D detrás del texto */
+        }
+        .hero-content * {
+            pointer-events: auto;
+        }
+
+        /* --- Efecto Galaxia CSS Sutil --- */
+        .stars {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: transparent;
+            z-index: -1;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            opacity: 0.3;
+            animation: twinkle 5s infinite;
+        }
+        @keyframes twinkle {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-100px); }
+        }
+
+        /* --- Tarjetas --- */
+        .custom-card {
+            background: #111;
+            border: 1px solid #333;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .custom-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(212, 0, 0, 0.2);
+            border-color: var(--primary-red);
+        }
+
+        /* --- Botón WhatsApp --- */
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 40px;
+            right: 40px;
+            background-color: #25d366;
+            color: #FFF;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 30px;
+            box-shadow: 2px 2px 3px #999;
+            z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .whatsapp-float:hover { background-color: #128C7E; transform: scale(1.1); color: white;}
+
+        /* --- Mapa --- */
+        #map { height: 400px; width: 100%; border-radius: 10px; z-index: 0; }
+        
+        /* --- Extras --- */
+        .timer-box {
+            background: #222;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            font-family: 'Russo One';
+            min-width: 60px;
+            text-align: center;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-red); }
+    </style>
+</head>
+<body>
+
+    <div class="stars"></div>
+
     <nav class="navbar navbar-expand-lg fixed-top navbar-dark glass-nav">
         <div class="container">
-            <a class="navbar-brand fst-italic fw-bold text-uppercase" href="#">
-                <i class="fa-solid fa-flag-checkered text-danger me-2"></i>SpeedCollect
+            <a class="navbar-brand fst-italic fw-bold text-uppercase d-flex align-items-center" href="#">
+                <i class="fa-solid fa-flag-checkered text-danger me-2 fa-lg"></i>
+                <span class="brand-font fs-4">Speed<span class="text-danger">Collect</span></span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                <ul class="navbar-nav align-items-center gap-3">
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto align-items-center gap-3">
+                    <li class="nav-item"><a class="nav-link active" href="#hero-section">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#featured">Destacados</a></li>
                     <li class="nav-item"><a class="nav-link" href="#showroom">Showroom</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#locations">Sedes</a></li>
-                    <li class="nav-item position-relative">
-                        <a class="nav-link" href="#" onclick="openPaymentModal()">
-                            <i class="fa-solid fa-cart-shopping"></i>
-                            <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none">0</span>
-                        </a>
-                    </li>
-                    <li id="auth-section" class="nav-item ms-2">
-                        <a href="login.html" class="btn btn-outline-light btn-sm px-4 rounded-0">LOGIN</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="#offers">Ofertas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contact">Contacto</a></li>
                 </ul>
+                
+                <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
+                    <div class="input-group input-group-sm d-none d-lg-flex" style="width: 200px;">
+                        <input type="text" id="search-input" class="form-control bg-dark border-secondary text-white" placeholder="Buscar modelo...">
+                        <button class="btn btn-outline-secondary border-secondary"><i class="fa fa-search"></i></button>
+                    </div>
+
+                    <a href="#" class="position-relative text-white fs-5" onclick="openPaymentModal()">
+                        <i class="fa-solid fa-cart-shopping hover-scale"></i>
+                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem; display:none;">0</span>
+                    </a>
+
+                    <div id="auth-section">
+                        <a href="login.html" class="btn btn-danger btn-sm px-4 rounded-1 fw-bold brand-font">LOGIN</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- HERO -->
-    <header class="vh-100 position-relative overflow-hidden d-flex align-items-center justify-content-center">
-        <div class="overlay-hero"></div>
-        <img src="https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=1920&q=80" class="d-block w-100 h-100 object-fit-cover position-absolute" alt="Lamborghini">
-        <div class="container position-relative z-2">
+    <section id="hero-section">
+        <div id="canvas-container"></div> <div class="container hero-content">
             <div class="row">
-                <div class="col-md-8">
-                    <h1 class="display-1 fw-bold text-uppercase fst-italic animate__animated animate__fadeInLeft">Ingeniería <span class="text-danger">Italiana</span></h1>
-                    <p class="lead fs-3 animate__animated animate__fadeInUp animate__delay-1s">Colección 2025. Escala 1:18. Detalles obsesivos.</p>
-                    <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 mt-3 hover-scale animate__animated animate__fadeInUp animate__delay-2s">VER GARAJE</a>
+                <div class="col-lg-6">
+                    <div class="badge bg-danger mb-3 px-3 py-2 animate__animated animate__fadeInDown">NUEVA COLECCIÓN 2025</div>
+                    <h1 class="display-2 text-uppercase fw-bold fst-italic animate__animated animate__fadeInLeft">
+                        Ingeniería <br><span class="text-danger">Italiana</span>
+                    </h1>
+                    <p class="lead text-secondary my-4 animate__animated animate__fadeInLeft animate__delay-1s" style="max-width: 500px;">
+                        Modelos a escala 1:18 con un nivel de detalle obsesivo. La perfección no es un acto, es un hábito.
+                    </p>
+                    <div class="d-flex gap-3 animate__animated animate__fadeInUp animate__delay-2s">
+                        <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold">VER GARAJE</a>
+                        <a href="#contact" class="btn btn-outline-light btn-lg rounded-0 px-5 fw-bold">CONTACTAR</a>
+                    </div>
                 </div>
             </div>
         </div>
-    </header>
+        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 animate__animated animate__bounce animate__infinite">
+            <i class="fa-solid fa-chevron-down text-white-50 fs-3"></i>
+        </div>
+    </section>
 
-    <!-- SHOWROOM -->
-    <section id="showroom" class="py-5 bg-dark">
+    <section id="featured" class="py-5 bg-black">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-center mb-5">
-                <h2 class="display-5 fw-bold text-uppercase mb-0">Inventario <span class="text-danger">Selecto</span></h2>
-                <div class="input-group w-25">
-                    <span class="input-group-text bg-transparent border-secondary text-light"><i class="fa fa-search"></i></span>
-                    <input type="text" id="search-input" class="form-control bg-transparent border-secondary text-light" placeholder="Buscar...">
+            <h2 class="text-center mb-5"><span class="text-danger">Trending</span> Ahora</h2>
+            
+            <div id="featuredCarousel" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <img src="https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80" class="d-block w-100 rounded shadow-lg border border-secondary" alt="Featured 1">
+                            </div>
+                            <div class="col-md-5 mt-4 mt-md-0 ps-md-5">
+                                <h3 class="text-danger">Porsche 911 GT3 RS</h3>
+                                <p class="text-muted">Edición Limitada "Carbon Series". Solo 50 unidades disponibles en todo el mundo.</p>
+                                <ul class="list-unstyled text-secondary mb-4">
+                                    <li><i class="fa-solid fa-check text-success me-2"></i>Escala 1:18</li>
+                                    <li><i class="fa-solid fa-check text-success me-2"></i>Interior detallado</li>
+                                    <li><i class="fa-solid fa-check text-success me-2"></i>Certificado de autenticidad</li>
+                                </ul>
+                                <button onclick="window.location.href='#showroom'" class="btn btn-outline-light rounded-0">COMPRAR AHORA</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-7">
+                                <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80" class="d-block w-100 rounded shadow-lg border border-secondary" alt="Featured 2">
+                            </div>
+                            <div class="col-md-5 mt-4 mt-md-0 ps-md-5">
+                                <h3 class="text-danger">Chevrolet Corvette C8</h3>
+                                <p class="text-muted">El primer Corvette con motor central. Replicado con pintura metalizada tricapa.</p>
+                                <button onclick="window.location.href='#showroom'" class="btn btn-outline-light rounded-0">VER DETALLES</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#featuredCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon bg-danger p-3 rounded"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#featuredCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon bg-danger p-3 rounded"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="showroom" class="py-5" style="background-color: #0f0f0f;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">CATÁLOGO <span class="text-danger">COMPLETO</span></h2>
+                <div class="d-none d-md-block" id="category-filters">
+                    <button class="btn btn-sm btn-outline-secondary active rounded-pill px-3" data-filter="all">Todos</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-filter="Autos">Supercars</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-filter="Camisetas">Merch</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-filter="Raros">Exclusivos</button>
                 </div>
             </div>
-
-            <!-- Filtros -->
-            <div class="mb-4">
-                <div class="btn-group" role="group" id="category-filters">
-                    <button type="button" class="btn btn-outline-light active" data-filter="all">Todos</button>
-                    <button type="button" class="btn btn-outline-light" data-filter="Autos">Autos</button>
-                    <button type="button" class="btn btn-outline-light" data-filter="Camisetas">Moda</button>
-                    <button type="button" class="btn btn-outline-light" data-filter="Raros">Raros</button>
+            
+            <div class="d-md-none mb-4 overflow-auto pb-2" id="category-filters-mobile">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-light text-nowrap" data-filter="all">Todos</button>
+                    <button class="btn btn-sm btn-outline-light text-nowrap" data-filter="Autos">Autos</button>
+                    <button class="btn btn-sm btn-outline-light text-nowrap" data-filter="Camisetas">Ropa</button>
                 </div>
             </div>
 
             <div id="loader" class="text-center py-5">
                 <div class="spinner-border text-danger" role="status"></div>
-                <p class="mt-2 text-muted">Cargando...</p>
+                <p class="mt-2 text-muted small">Cargando inventario...</p>
             </div>
 
-            <!-- Grid de Productos -->
-            <div id="products-container" class="row g-4 d-none">
-                <!-- JS inyecta aquí -->
+            <div id="products-container" class="row g-4 d-none"></div>
+            
+            <div class="text-center mt-5">
+                <button class="btn btn-outline-danger px-5 rounded-0">CARGAR MÁS</button>
             </div>
         </div>
     </section>
 
-    <!-- MODAL DE PRODUCTO (3D & INFO) -->
+    <section id="offers" class="py-5 position-relative overflow-hidden">
+        <div class="position-absolute top-0 start-0 w-100 h-100 bg-danger" style="opacity: 0.1; transform: skewY(-3deg); z-index: 0;"></div>
+        <div class="container position-relative z-1">
+            <div class="row align-items-center bg-dark border border-secondary p-4 rounded-3 shadow-lg">
+                <div class="col-lg-6">
+                    <h3 class="text-danger fst-italic">OFERTA FLASH 🔥</h3>
+                    <p class="mb-0">Descuento del <strong>30%</strong> en toda la línea Ferrari. ¡Solo por tiempo limitado!</p>
+                </div>
+                <div class="col-lg-6 mt-3 mt-lg-0 text-center text-lg-end">
+                    <div class="d-inline-flex gap-3 justify-content-center">
+                        <div>
+                            <div class="timer-box fs-3" id="hours">00</div>
+                            <small class="text-muted">HRS</small>
+                        </div>
+                        <div class="fs-3 align-self-center">:</div>
+                        <div>
+                            <div class="timer-box fs-3" id="minutes">00</div>
+                            <small class="text-muted">MIN</small>
+                        </div>
+                        <div class="fs-3 align-self-center">:</div>
+                        <div>
+                            <div class="timer-box fs-3 text-danger" id="seconds">00</div>
+                            <small class="text-muted">SEG</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5 bg-black">
+        <div class="container">
+            <h2 class="text-center mb-5">LO QUE DICEN LOS <span class="text-danger">EXPERTOS</span></h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card custom-card h-100 p-4 text-center">
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" class="rounded-circle mx-auto mb-3 border border-danger p-1" width="80" alt="User">
+                        <h5 class="fw-bold">Carlos Sainz</h5>
+                        <div class="text-warning mb-2"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
+                        <p class="text-muted small fst-italic">"La calidad del metal die-cast es impresionante. Llegó a Madrid en 3 días."</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card custom-card h-100 p-4 text-center">
+                        <img src="https://randomuser.me/api/portraits/women/44.jpg" class="rounded-circle mx-auto mb-3 border border-danger p-1" width="80" alt="User">
+                        <h5 class="fw-bold">Maria Rossi</h5>
+                        <div class="text-warning mb-2"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+                        <p class="text-muted small fst-italic">"El empaquetado es tan premium como el auto. Excelente servicio al cliente."</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card custom-card h-100 p-4 text-center">
+                        <img src="https://randomuser.me/api/portraits/men/85.jpg" class="rounded-circle mx-auto mb-3 border border-danger p-1" width="80" alt="User">
+                        <h5 class="fw-bold">J. Clarkson</h5>
+                        <div class="text-warning mb-2"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
+                        <p class="text-muted small fst-italic">"SpeedCollect es el único lugar donde compro mis modelos 1:18."</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="py-5" style="background: #0f0f0f;">
+        <div class="container">
+            <div class="row g-0 rounded-4 overflow-hidden border border-secondary shadow-lg">
+                <div class="col-lg-6 p-5 bg-dark">
+                    <h2 class="mb-4">CONTÁCTANOS</h2>
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">NOMBRE COMPLETO</label>
+                            <input type="text" class="form-control bg-black border-secondary text-white" placeholder="Tu nombre">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">CORREO ELECTRÓNICO</label>
+                            <input type="email" class="form-control bg-black border-secondary text-white" placeholder="nombre@correo.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">MENSAJE</label>
+                            <textarea class="form-control bg-black border-secondary text-white" rows="4" placeholder="¿En qué podemos ayudarte?"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100 fw-bold py-2">ENVIAR MENSAJE</button>
+                    </form>
+                    
+                    <div class="mt-4 pt-4 border-top border-secondary row text-center">
+                        <div class="col-4">
+                            <i class="fa-brands fa-whatsapp fs-3 text-success mb-2"></i>
+                            <p class="small text-muted">Chat</p>
+                        </div>
+                        <div class="col-4">
+                            <i class="fa-regular fa-envelope fs-3 text-primary mb-2"></i>
+                            <p class="small text-muted">Email</p>
+                        </div>
+                        <div class="col-4">
+                            <i class="fa-solid fa-location-dot fs-3 text-danger mb-2"></i>
+                            <p class="small text-muted">Visita</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 position-relative">
+                    <div id="map" class="h-100 w-100" style="min-height: 400px;"></div>
+                    <div class="position-absolute bottom-0 start-0 bg-dark p-3 m-3 rounded border border-secondary shadow" style="z-index: 999; max-width: 250px;">
+                        <h6 class="fw-bold text-danger">SpeedCollect HQ</h6>
+                        <p class="small text-muted mb-0">Zona T, Bogotá, Colombia.<br>Lunes a Viernes: 9am - 6pm</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5 bg-black">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-end mb-4">
+                <h2 class="mb-0">PIT STOP <span class="text-danger">NEWS</span></h2>
+                <a href="#" class="text-decoration-none text-danger small fw-bold">LEER MÁS <i class="fa-solid fa-arrow-right"></i></a>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card bg-dark border-secondary h-100">
+                        <img src="https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=600&q=80" class="card-img-top opacity-75" alt="News">
+                        <div class="card-body">
+                            <small class="text-danger fw-bold">LANZAMIENTOS</small>
+                            <h5 class="card-title mt-2">Llega el nuevo BMW M4 GT3</h5>
+                            <p class="card-text text-muted small">Análisis detallado de la nueva réplica de Minichamps.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark border-secondary h-100">
+                        <img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=600&q=80" class="card-img-top opacity-75" alt="News">
+                        <div class="card-body">
+                            <small class="text-danger fw-bold">EVENTOS</small>
+                            <h5 class="card-title mt-2">Expo Hobby Colombia 2025</h5>
+                            <p class="card-text text-muted small">Estaremos presentes con un stand exclusivo.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-dark border-secondary h-100">
+                        <img src="https://images.unsplash.com/photo-1503376763036-066120622c74?auto=format&fit=crop&w=600&q=80" class="card-img-top opacity-75" alt="News">
+                        <div class="card-body">
+                            <small class="text-danger fw-bold">GUÍAS</small>
+                            <h5 class="card-title mt-2">Cómo limpiar tus modelos Die-Cast</h5>
+                            <p class="card-text text-muted small">Consejos profesionales para mantener el brillo.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-dark pt-5 pb-3 border-top border-secondary">
+        <div class="container">
+            <div class="row gy-4">
+                <div class="col-lg-4">
+                    <h4 class="brand-font text-white">Speed<span class="text-danger">Collect</span></h4>
+                    <p class="text-muted small mt-3">
+                        Somos distribuidores oficiales de las mejores marcas de coleccionismo automotriz. Pasión por el detalle, velocidad en la entrega.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white hover-scale"><i class="fa-brands fa-instagram fa-lg"></i></a>
+                        <a href="#" class="text-white hover-scale"><i class="fa-brands fa-facebook fa-lg"></i></a>
+                        <a href="#" class="text-white hover-scale"><i class="fa-brands fa-tiktok fa-lg"></i></a>
+                    </div>
+                </div>
+                <div class="col-lg-2 col-6">
+                    <h6 class="fw-bold text-white mb-3">TIENDA</h6>
+                    <ul class="list-unstyled text-muted small">
+                        <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-white">Nuevos</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-white">Más vendidos</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-white">Ofertas</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-2 col-6">
+                    <h6 class="fw-bold text-white mb-3">SOPORTE</h6>
+                    <ul class="list-unstyled text-muted small">
+                        <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-white">Envíos</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-white">Devoluciones</a></li>
+                        <li class="mb-2"><a href="#" class="text-decoration-none text-muted hover-white">FAQ</a></li>
+                    </ul>
+                </div>
+                <div class="col-lg-4">
+                    <h6 class="fw-bold text-white mb-3">NEWSLETTER</h6>
+                    <div class="input-group">
+                        <input type="text" class="form-control bg-black border-secondary text-white" placeholder="Tu correo">
+                        <button class="btn btn-danger"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                    <small class="text-muted d-block mt-2" style="font-size: 0.7rem;">Suscríbete para recibir ofertas exclusivas.</small>
+                </div>
+            </div>
+            <hr class="border-secondary mt-4">
+            <p class="text-center text-muted small mb-0">&copy; 2025 SpeedCollect Inc. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <a href="https://wa.me/573000000000" class="whatsapp-float" target="_blank">
+        <i class="fa-brands fa-whatsapp"></i>
+    </a>
+
     <div class="modal fade" id="productModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content bg-black text-white border-secondary shadow-lg">
@@ -96,22 +510,14 @@
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <!-- Visor -->
                         <div class="col-lg-8 mb-3" id="visual-container"></div>
-                        
-                        <!-- Info -->
                         <div class="col-lg-4">
                             <h2 class="text-danger fw-bold" id="modal-p-price">$0.00</h2>
                             <p class="text-warning small mb-3" id="modal-p-stock">Stock: 0</p>
                             <p class="text-light text-muted" id="modal-p-desc">Descripción...</p>
-                            
                             <hr class="border-secondary">
-                            
-                            <!-- Reseñas -->
                             <h6 class="text-uppercase fw-bold text-muted mb-3">Reseñas</h6>
                             <div id="reviewsContainer" class="mb-3 custom-scrollbar" style="max-height: 200px; overflow-y: auto;"></div>
-                            
-                            <!-- Formulario -->
                             <form id="reviewForm" class="mt-3">
                                 <div class="input-group input-group-sm mb-2">
                                     <select class="form-select bg-dark text-white border-secondary" id="review-rating">
@@ -130,7 +536,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE PAGO (CARRITO) -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border border-secondary">
@@ -141,8 +546,7 @@
                 <div class="modal-body">
                     <div id="cart-items"></div>
                     <div class="d-flex justify-content-between fw-bold fs-4 mt-3 pt-3 border-top border-secondary">
-                        <span>TOTAL:</span>
-                        <span id="cart-total" class="text-danger">$0.00</span>
+                        <span>TOTAL:</span><span id="cart-total" class="text-danger">$0.00</span>
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
@@ -152,15 +556,11 @@
         </div>
     </div>
 
-    <!-- MODAL ALERTA DE LOGIN -->
     <div class="modal fade" id="loginRequiredModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark border-danger text-center p-4">
-                <div class="mb-3">
-                    <i class="fa-solid fa-lock fa-3x text-danger animate__animated animate__pulse animate__infinite"></i>
-                </div>
+                <div class="mb-3"><i class="fa-solid fa-lock fa-3x text-danger animate__animated animate__pulse animate__infinite"></i></div>
                 <h4 class="text-white fw-bold">Acceso VIP Requerido</h4>
-                <p class="text-muted">Inicia sesión para acceder a compras y reseñas exclusivas.</p>
                 <div class="d-flex justify-content-center gap-3 mt-3">
                     <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
                     <a href="login.html" class="btn btn-danger fw-bold px-4">Entrar</a>
@@ -169,12 +569,118 @@
         </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- PDF Libs -->
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <script src="script.js"></script>
+
+    <script>
+        // --- A. LÓGICA DEL MAPA (Leaflet) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const map = L.map('map', { scrollWheelZoom: false }).setView([4.6097, -74.0817], 13); // Coordenadas Bogotá (Ejemplo)
+            
+            // Estilo oscuro del mapa (CartoDB DarkMatter)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(map);
+
+            // Marcador Personalizado
+            const customIcon = L.icon({
+                iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', // Icono Pin
+                iconSize: [38, 38],
+                iconAnchor: [19, 38],
+                popupAnchor: [0, -30]
+            });
+
+            L.marker([4.6097, -74.0817], {icon: customIcon}).addTo(map)
+                .bindPopup('<strong style="color:black">SpeedCollect HQ</strong><br><span style="color:#555">Sede Principal</span>')
+                .openPopup();
+        });
+
+        // --- B. CUENTA REGRESIVA (Ofertas) ---
+        function updateTimer() {
+            const now = new Date();
+            const end = new Date();
+            end.setHours(23, 59, 59); // Fin del día actual
+
+            const diff = end - now;
+            const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const m = Math.floor((diff / 1000 / 60) % 60);
+            const s = Math.floor((diff / 1000) % 60);
+
+            document.getElementById('hours').innerText = h < 10 ? '0'+h : h;
+            document.getElementById('minutes').innerText = m < 10 ? '0'+m : m;
+            document.getElementById('seconds').innerText = s < 10 ? '0'+s : s;
+        }
+        setInterval(updateTimer, 1000);
+        updateTimer();
+
+        // --- C. ANIMACIÓN 3D HERO (Three.js - Esfera Tech Roja) ---
+        // NOTA: Para poner un auto real, necesitarías cargar un archivo GLTFLoader
+        // Aquí uso una geometría nativa para asegurar que funcione sin archivos externos.
+        const init3D = () => {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            
+            // Cámara
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            // Renderer
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            container.appendChild(renderer.domElement);
+
+            // Objeto (Representación Abstracta de Velocidad)
+            const geometry = new THREE.IcosahedronGeometry(2, 1);
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0xD40000, 
+                wireframe: true,
+                emissive: 0x440000 
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+            scene.add(sphere);
+
+            // Luces
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(1, 1, 5);
+            scene.add(light);
+            const ambient = new THREE.AmbientLight(0x404040);
+            scene.add(ambient);
+
+            // Animación Loop
+            const animate = function () {
+                requestAnimationFrame(animate);
+                sphere.rotation.x += 0.002;
+                sphere.rotation.y += 0.005;
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            // Responsive
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+            // Interacción Mouse leve
+            document.addEventListener('mousemove', (e) => {
+                const mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                const mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+                sphere.rotation.x = mouseY * 0.5;
+                sphere.rotation.y = mouseX * 0.5;
+            });
+        };
+        init3D();
+    </script>
 </body>
 </html>

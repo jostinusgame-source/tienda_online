@@ -2,40 +2,222 @@ const API_URL = '/api';
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let allProducts = [];
 let currentProductModalId = null;
+let itiInstance = null; // Instancia global para el validador telefónico
 
 // ==========================================
-// CONFIGURACIÓN DE PAÍSES Y REGLAS DE TELÉFONO
-// ==========================================
-const COUNTRY_RULES = [
-    { country: "Colombia", code: "57", digits: 10, flag: "🇨🇴", pattern: /^3\d{9}$/, hint: "Debe iniciar con 3 (10 dígitos)" },
-    { country: "México", code: "52", digits: 10, flag: "🇲🇽", pattern: /^\d{10}$/, hint: "10 dígitos" },
-    { country: "Estados Unidos", code: "1", digits: 10, flag: "🇺🇸", pattern: /^[2-9]\d{2}[2-9]\d{6}$/, hint: "10 dígitos (NPA-NXX-XXXX)" },
-    { country: "España", code: "34", digits: 9, flag: "🇪🇸", pattern: /^[67]\d{8}$/, hint: "9 dígitos, móvil inicia con 6 o 7" },
-    { country: "Argentina", code: "54", digits: 10, flag: "🇦🇷", pattern: /^\d{10,11}$/, hint: "10 u 11 dígitos" },
-    { country: "Chile", code: "56", digits: 9, flag: "🇨🇱", pattern: /^9\d{8}$/, hint: "9 dígitos, inicia con 9" },
-    { country: "Perú", code: "51", digits: 9, flag: "🇵🇪", pattern: /^9\d{8}$/, hint: "9 dígitos, inicia con 9" },
-    { country: "Ecuador", code: "593", digits: 10, flag: "🇪🇨", pattern: /^09\d{8}$/, hint: "10 dígitos, inicia con 09" }
-];
-
-// ==========================================
-// INICIALIZACIÓN
+// 1. INICIALIZACIÓN GLOBAL
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     checkAuthStatus();
     updateCartUI();
 
-    // Detección de página y carga de módulos
-    if (document.getElementById('products-container')) initStore();
-    if (document.getElementById('register-form')) initRegisterStrict();
-    if (document.getElementById('login-form')) initLogin();
-    
-    // Listener Global para Reseñas
+    // Detectar en qué página estamos y cargar lo necesario
+    const storeContainer = document.getElementById('products-container');
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
     const reviewForm = document.getElementById('reviewForm');
-    if(reviewForm) reviewForm.addEventListener('submit', handleReviewSubmit);
+
+    if (storeContainer) initStore();
+    if (registerForm) initStrictRegister();
+    if (loginForm) initLogin();
+    if (reviewForm) reviewForm.addEventListener('submit', handleReviewSubmit);
 });
 
 // ==========================================
-// 1. TIENDA INTERACTIVA (Click en todo el card)
+// 2. SISTEMA DE REGISTRO "ULTRA ESTRICTO"
+// ==========================================
+function initStrictRegister() {
+    const nameInput = document.getElementById('reg-name');
+    const emailInput = document.getElementById('reg-email');
+    const phoneInput = document.getElementById('reg-phone');
+    const passInput = document.getElementById('reg-pass');
+    const form = document.getElementById('register-form');
+    const msg = document.getElementById('msg');
+
+    // 2.1 Configuración de Intl-Tel-Input (Librería Profesional)
+    if (phoneInput) {
+        itiInstance = window.intlTelInput(phoneInput, {
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js", // Validador de Google
+            separateDialCode: true,
+            initialCountry: "auto",
+            geoIpLookup: callback => {
+                fetch("https://ipapi.co/json")
+                .then(res => res.json())
+                .then(data => callback(data.country_code))
+                .catch(() => callback("co"));
+            },
+            preferredCountries: ["co", "mx", "us", "es", "ar", "cl", "pe"],
+        });
+
+        // Limpiar error al escribir
+        phoneInput.addEventListener('input', () => {
+            phoneInput.classList.remove('is-invalid');
+            document.getElementById('phone-error').style.display = 'none';
+        });
+    }
+
+    // 2.2 Listeners de Validación en Tiempo Real (Blur)
+    if(nameInput) nameInput.addEventListener('blur', () => validateField('name', nameInput));
+    if(emailInput) emailInput.addEventListener('blur', () => validateField('email', emailInput));
+    if(phoneInput) phoneInput.addEventListener('blur', () => validateField('phone', phoneInput));
+
+    // 2.3 Envío del Formulario
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msg.innerText = "";
+
+            // Ejecutar validaciones finales
+            const vName = validateField('name', nameInput);
+            const vEmail = validateField('email', emailInput);
+            const vPhone = validateField('phone', phoneInput);
+            
+            // Validación Contraseña Estricta
+            const passVal = passInput.value;
+            // Regex: Min 10 chars, 1 Mayúscula, 1 Número, 1 Caracter Especial
+            const passRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{10,}$/;
+            
+            if(!passRegex.test(passVal)) {
+                alert("SEGURIDAD: La contraseña debe tener al menos 10 caracteres, una mayúscula, un número y un símbolo.");
+                passInput.focus();
+                return;
+            }
+
+            if (!vName || !vEmail || !vPhone) {
+                msg.innerHTML = '<span class="text-danger fw-bold">Por favor, corrige los campos marcados en rojo.</span>';
+                return;
+            }
+
+            // Obtener datos limpios
+            const fullPhone = itiInstance.getNumber(); // Número completo (+57300...)
+
+            try {
+                msg.innerHTML = '<span class="text-warning">Verificando credenciales...</span>';
+                
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: nameInput.value.trim(),
+                        email: emailInput.value.trim(),
+                        password: passVal,
+                        phone: fullPhone
+                    })
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    msg.innerHTML = '<span class="text-success fw-bold">¡Registro Exitoso! Redirigiendo...</span>';
+                    setTimeout(() => window.location.href = 'index.html', 2000);
+                } else {
+                    msg.innerHTML = `<span class="text-danger fw-bold">${data.message || 'Error en el registro.'}</span>`;
+                }
+            } catch (err) {
+                msg.innerHTML = '<span class="text-danger">Error de conexión con el servidor.</span>';
+            }
+        });
+    }
+}
+
+// 2.4 Lógica Central de Validaciones (El "Core" de Seguridad)
+function validateField(type, input) {
+    const val = input.value.trim();
+    let isValid = true;
+    let errorMsg = "";
+    const errorDiv = document.getElementById(`${type}-error`);
+    
+    // --- VALIDACIÓN NOMBRE ---
+    if (type === 'name') {
+        const words = val.split(/\s+/).filter(w => w.length > 0);
+        const forbiddenWords = ["jeje", "jojo", "jaja", "admin", "test", "prueba", "null", "undefined", "user", "usuario"];
+
+        // Regla 1: Mínimo 1 palabra, Máximo 3 palabras
+        if (words.length < 1 || words.length > 3) {
+            isValid = false; errorMsg = "El nombre debe tener entre 1 y 3 palabras.";
+        } 
+        // Regla 2: Ninguna palabra repetida ("Juan Juan")
+        else if (new Set(words.map(w => w.toLowerCase())).size !== words.length) {
+            isValid = false; errorMsg = "No repitas palabras en el nombre.";
+        }
+        else {
+            for (let word of words) {
+                // Regla 3: Solo alfabeto estándar (sin números, sin emojis)
+                if (!/^[a-zA-ZáéíóúñÁÉÍÓÚÑ]+$/.test(word)) {
+                    isValid = false; errorMsg = "Usa solo letras válidas (sin números ni símbolos)."; break;
+                }
+                // Regla 4: NO letras seguidas iguales ("Aanna", "Carlosss")
+                // Excepción posible: Nombres reales como 'Aaron' o 'Ll' en español si quisieras, 
+                // pero pediste estricto: "no se permiten dos letras seguidas iguales".
+                if (/(.)\1/.test(word.toLowerCase())) {
+                    isValid = false; errorMsg = `Formato inválido en "${word}" (letras repetidas consecutivas).`; break;
+                }
+                // Regla 5: Palabras prohibidas
+                if (forbiddenWords.includes(word.toLowerCase())) {
+                    isValid = false; errorMsg = "Nombre no permitido."; break;
+                }
+            }
+        }
+    } 
+    
+    // --- VALIDACIÓN CORREO ---
+    else if (type === 'email') {
+        // Regla: Regex estricto + Mínimo 3 chars antes del @
+        const strictEmailRegex = /^([a-zA-Z0-9._%-]{3,})@([a-zA-Z0-9.-]+)\.([a-zA-Z]{2,})$/;
+        
+        if (!strictEmailRegex.test(val)) {
+            isValid = false; errorMsg = "Correo inválido (Mín. 3 letras antes del @).";
+        } else {
+            // Regla: Rechazar correos temporales conocidos
+            const domain = val.split('@')[1];
+            const tempDomains = ['yopmail.com', 'temp-mail.org', 'mailinator.com', '10minutemail.com'];
+            if (tempDomains.includes(domain)) {
+                isValid = false; errorMsg = "No se permiten correos temporales.";
+            }
+        }
+    } 
+    
+    // --- VALIDACIÓN TELÉFONO ---
+    else if (type === 'phone') {
+        if (!itiInstance) return false;
+
+        // Regla 1: Validación estricta de la librería (longitud y prefijo por país)
+        if (!itiInstance.isValidNumber()) {
+            isValid = false;
+            const errorCode = itiInstance.getValidationError();
+            const errorMap = ["Número inválido", "Código de país inválido", "Muy corto", "Muy largo", "Número inválido"];
+            errorMsg = errorMap[errorCode] || "Número no válido para este país.";
+        } 
+        else {
+            // Regla 2: Bloqueo manual de patrones sospechosos (ej: 3000000000)
+            const rawNumber = val.replace(/\D/g, ''); // Solo dígitos
+            if (/^(\d)\1+$/.test(rawNumber)) { // Chequea si todos los dígitos son iguales
+                isValid = false; errorMsg = "Número ficticio detectado.";
+            }
+        }
+    }
+
+    // Actualización Visual (UI)
+    if (!isValid) {
+        input.classList.add('is-invalid');
+        input.classList.remove('is-valid');
+        if (errorDiv) {
+            errorDiv.innerText = errorMsg;
+            errorDiv.style.display = 'block';
+        }
+    } else {
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+        if (errorDiv) errorDiv.style.display = 'none';
+    }
+
+    return isValid;
+}
+
+// ==========================================
+// 3. TIENDA ECOMMERCE (Lógica visual y datos)
 // ==========================================
 async function initStore() {
     const container = document.getElementById('products-container');
@@ -51,7 +233,7 @@ async function initStore() {
         if (container) container.classList.remove('d-none');
         renderProducts('all');
 
-        // Filtros
+        // Filtros de Categoría
         document.querySelectorAll('#category-filters button').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
@@ -87,12 +269,9 @@ function renderProducts(filter, list = null) {
     }
 
     container.innerHTML = final.map(p => {
-        // Fallback de imagen si viene vacía
         const img = p.image_url || 'https://via.placeholder.com/600x400?text=No+Image';
-        const price = parseFloat(p.price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         const isOut = p.stock <= 0;
 
-        // Tarjeta completa es clickeable con onclick="openModal..."
         return `
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card bg-dark text-white border-secondary h-100 shadow product-card hover-scale" 
@@ -109,8 +288,7 @@ function renderProducts(filter, list = null) {
                     <small class="text-muted mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
                     
                     <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
-                        <span class="fs-4 fw-bold text-danger">${price}</span>
-                        <!-- Botón carrito con stopPropagation para no abrir el modal al añadir -->
+                        <span class="fs-4 fw-bold text-danger">$${parseFloat(p.price).toFixed(2)}</span>
                         <button class="btn btn-danger btn-sm rounded-circle p-2 shadow" 
                                 onclick="event.stopPropagation(); addToCart(${p.id})" 
                                 ${isOut ? 'disabled' : ''}>
@@ -124,7 +302,7 @@ function renderProducts(filter, list = null) {
 }
 
 // ==========================================
-// 2. MODAL DE INSPECCIÓN 3D
+// 4. MODAL DETALLE Y 3D
 // ==========================================
 window.openModal = function(id) {
     const p = allProducts.find(x => x.id === id);
@@ -138,12 +316,11 @@ window.openModal = function(id) {
     document.getElementById('modal-p-price').innerText = price;
     document.getElementById('modal-p-stock').innerText = p.stock > 0 ? `Stock: ${p.stock} unidades` : "Agotado";
     
-    // VISUALIZADOR 3D SKETCHFAB
     const container = document.getElementById('visual-container');
     if(p.model_url && p.model_url.includes('sketchfab')) {
         container.innerHTML = `
             <div class="ratio ratio-16x9 border border-secondary rounded shadow-lg">
-                <iframe src="${p.model_url}" title="${p.name}" frameborder="0" allow="autoplay; fullscreen; vr" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+                <iframe src="${p.model_url}" title="${p.name}" frameborder="0" allow="autoplay; fullscreen; vr"></iframe>
             </div>
             <p class="text-center text-muted small mt-2"><i class="fa-solid fa-hand-pointer"></i> Arrastra para rotar en 360°</p>
         `;
@@ -156,7 +333,7 @@ window.openModal = function(id) {
 }
 
 // ==========================================
-// 3. RECIBO PDF PROFESIONAL (Estilo Imagen)
+// 5. CHECKOUT Y PDF
 // ==========================================
 window.checkout = function() {
     if(!window.jspdf) return alert("Error cargando librería PDF");
@@ -165,49 +342,19 @@ window.checkout = function() {
     const user = JSON.parse(localStorage.getItem('user'));
     const date = new Date().toLocaleDateString();
     
-    // Configuración de Colores
-    const darkBlue = "#1a237e";
-
-    // 1. Encabezado "RECIBO"
+    // Encabezado
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(40);
-    doc.setTextColor(darkBlue);
-    doc.text("RECIBO", 20, 25);
-
-    // 2. Logo / Marca
-    doc.setFillColor(200, 200, 200);
-    doc.circle(170, 20, 12, 'F');
-    doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
-    doc.text("SC", 166, 22); // SpeedCollect Initials
-
-    // 3. Info Empresa
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont("helvetica", "bold");
-    doc.text("SpeedCollect Inc.", 20, 40);
-    doc.setFont("helvetica", "normal");
-    doc.text("Zona Rosa, Bogotá", 20, 45);
-    doc.text("contact@speedcollect.com", 20, 50);
-
-    // 4. Datos Cliente y Recibo
-    doc.setFont("helvetica", "bold");
-    doc.text("ENVIAR A", 20, 65);
-    doc.setFont("helvetica", "normal");
-    doc.text(user.name, 20, 72);
-    doc.text(user.email, 20, 77);
-
-    // Columna Der (Detalles)
-    const rightColX = 120;
-    doc.setFont("helvetica", "bold");
-    doc.text("N° DE RECIBO:", rightColX, 65);
-    doc.text("FECHA:", rightColX, 72);
+    doc.setFontSize(30); doc.setTextColor("#b71c1c"); // Rojo oscuro
+    doc.text("RECIBO DE COMPRA", 20, 25);
     
-    doc.setFont("helvetica", "normal");
-    doc.text(`#SC-${Date.now().toString().slice(-6)}`, rightColX + 40, 65, {align: 'right'});
-    doc.text(date, rightColX + 40, 72, {align: 'right'});
+    // Info Cliente
+    doc.setFontSize(10); doc.setTextColor(0);
+    doc.text("SpeedCollect Inc.", 20, 35);
+    doc.text(`Fecha: ${date}`, 20, 40);
+    doc.text(`Cliente: ${user.name}`, 20, 50);
+    doc.text(`Email: ${user.email}`, 20, 55);
 
-    // 5. Tabla de Productos (Estilo Clean)
+    // Tabla
     const tableBody = cart.map(item => [
         item.quantity,
         item.name,
@@ -216,166 +363,43 @@ window.checkout = function() {
     ]);
 
     doc.autoTable({
-        startY: 90,
-        head: [['CANT.', 'DESCRIPCIÓN', 'PRECIO UNITARIO', 'IMPORTE']],
+        startY: 65,
+        head: [['CANT.', 'ITEM', 'PRECIO', 'SUBTOTAL']],
         body: tableBody,
-        theme: 'plain', 
-        headStyles: { 
-            fillColor: [255, 255, 255], 
-            textColor: darkBlue, 
-            fontStyle: 'bold',
-            lineWidth: {bottom: 0.5},
-            lineColor: [200, 200, 200]
-        },
-        styles: { textColor: [50, 50, 50], fontSize: 10, cellPadding: 4 },
-        columnStyles: {
-            0: { halign: 'center' },
-            2: { halign: 'right' },
-            3: { halign: 'right', fontStyle: 'bold' }
-        }
+        theme: 'striped',
+        headStyles: { fillColor: [183, 28, 28] }
     });
 
-    // 6. Totales
+    // Totales
     let finalY = doc.lastAutoTable.finalY + 10;
-    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const tax = subtotal * 0.19; // IVA ejemplo
-    const total = subtotal + tax;
-
-    doc.text("Subtotal", 140, finalY);
-    doc.text(`$${subtotal.toFixed(2)}`, 190, finalY, {align: 'right'});
+    const total = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     
-    doc.text("IVA (19%)", 140, finalY + 7);
-    doc.text(`$${tax.toFixed(2)}`, 190, finalY + 7, {align: 'right'});
+    doc.setFontSize(14); doc.setFont("helvetica", "bold");
+    doc.text(`TOTAL PAGADO: $${total.toFixed(2)} USD`, 120, finalY);
 
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(darkBlue);
-    doc.text("TOTAL", 140, finalY + 16);
-    doc.text(`$${total.toFixed(2)}`, 190, finalY + 16, {align: 'right'});
-
-    // 7. Footer "Gracias"
-    doc.setFontSize(24);
-    doc.setFont("times", "italic"); 
-    doc.setTextColor(darkBlue);
-    doc.text("Gracias", 20, 250);
-
-    doc.save("Recibo_SpeedCollect.pdf");
+    // Guardar
+    doc.save(`Recibo_SpeedCollect_${Date.now()}.pdf`);
     
     // Limpiar
     cart = [];
     localStorage.removeItem('cart');
     updateCartUI();
     bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-    
-    alert("¡Compra Exitosa! Tu recibo se ha descargado.");
+    alert("¡Compra Exitosa! Recibo descargado.");
 }
 
 // ==========================================
-// 4. REGISTRO VISUAL (Banderas en tiempo real)
-// ==========================================
-function initRegisterStrict() {
-    const phoneIn = document.getElementById('reg-phone');
-    const flagDisplay = document.getElementById('flag-icon'); 
-    const form = document.getElementById('register-form');
-    const msg = document.getElementById('msg');
-
-    if(phoneIn) {
-        phoneIn.addEventListener('input', (e) => {
-            const val = e.target.value.replace(/\D/g, '');
-            let detected = null;
-
-            // Lógica de detección
-            if(val.startsWith('57') || val.startsWith('3')) detected = COUNTRY_RULES[0]; // Colombia
-            else if(val.startsWith('52')) detected = COUNTRY_RULES[1]; // Mexico
-            else if(val.startsWith('1')) detected = COUNTRY_RULES[2]; // USA
-            else if(val.startsWith('34') || val.startsWith('6') || val.startsWith('7')) detected = COUNTRY_RULES[3]; // España
-            else if(val.startsWith('54')) detected = COUNTRY_RULES[4]; // Argentina
-            else if(val.startsWith('56') || val.startsWith('9')) detected = COUNTRY_RULES[5]; // Chile
-
-            const hint = document.getElementById('phone-hint') || createHint(phoneIn);
-
-            if(detected) {
-                if(flagDisplay) flagDisplay.innerHTML = `<span style="font-size: 1.5rem;">${detected.flag}</span>`;
-                hint.innerText = `${detected.flag} ${detected.country}: ${detected.hint}`;
-                
-                if(!detected.pattern.test(val)) {
-                    phoneIn.classList.add('is-invalid');
-                    phoneIn.classList.remove('is-valid');
-                } else {
-                    phoneIn.classList.remove('is-invalid');
-                    phoneIn.classList.add('is-valid');
-                }
-            } else {
-                if(flagDisplay) flagDisplay.innerHTML = `<span style="font-size: 1.5rem;">🌐</span>`;
-                hint.innerText = "Ingresa el número con prefijo (ej: 57...)";
-                phoneIn.classList.remove('is-valid', 'is-invalid');
-            }
-        });
-    }
-
-    if(form) {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Validaciones Estrictas antes de enviar
-            const nameVal = document.getElementById('reg-name').value.trim();
-            const passVal = document.getElementById('reg-pass').value;
-            const phoneVal = phoneIn.value.replace(/\D/g, '');
-
-            if(nameVal.split(' ').length > 3) return alert("El nombre no puede tener más de 3 palabras.");
-            if(/(.)\1/.test(nameVal.toLowerCase())) return alert("El nombre tiene letras repetidas inválidas.");
-            if(passVal.length < 10) return alert("La contraseña debe tener al menos 10 caracteres.");
-            
-            // Envío
-            try {
-                const res = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        name: nameVal,
-                        email: document.getElementById('reg-email').value,
-                        password: passVal,
-                        phone: phoneVal
-                    })
-                });
-                const data = await res.json();
-                if(res.ok) {
-                    localStorage.setItem('token', data.token);
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    alert("¡Registro Exitoso!");
-                    window.location.href = 'index.html';
-                } else {
-                    msg.innerHTML = `<span class="text-danger">${data.message}</span>`;
-                }
-            } catch(err) {
-                msg.innerHTML = "Error de conexión";
-            }
-        });
-    }
-}
-
-function createHint(input) {
-    const s = document.createElement('small');
-    s.id = 'phone-hint';
-    s.className = 'd-block mt-1 text-muted';
-    input.parentNode.appendChild(s);
-    return s;
-}
-
-// ==========================================
-// 5. AUTH & ADMIN
+// 6. AUTENTICACIÓN Y LOGIN
 // ==========================================
 function checkAuthStatus() {
     const u = JSON.parse(localStorage.getItem('user'));
     const div = document.getElementById('auth-section');
     
     if(div && u) {
-        const adminCrown = u.role === 'admin' ? 
-            `<a href="admin.html" class="btn btn-warning btn-sm me-2 fw-bold shadow"><i class="fa-solid fa-crown"></i> ADMIN</a>` : '';
-            
+        const adminBadge = u.role === 'admin' ? '<span class="badge bg-warning text-dark me-2">ADMIN</span>' : '';
         div.innerHTML = `
             <div class="d-flex align-items-center">
-                ${adminCrown}
+                ${adminBadge}
                 <div class="dropdown">
                     <button class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown">
                         <i class="fa-solid fa-user-astronaut"></i> ${u.name.split(' ')[0]}
@@ -392,7 +416,7 @@ function initLogin() {
     document.getElementById('login-form').addEventListener('submit', async e => {
         e.preventDefault();
         const msg = document.getElementById('msg');
-        msg.innerHTML = 'Verificando...';
+        msg.innerHTML = 'Conectando...';
         
         try {
             const res = await fetch(`${API_URL}/auth/login`, {
@@ -414,8 +438,10 @@ function initLogin() {
     });
 }
 
+function logout() { localStorage.clear(); location.href = 'index.html'; }
+
 // ==========================================
-// 6. FUNCIONES AUXILIARES (Carrito, Reseñas)
+// 7. CARRITO Y FUNCIONES AUXILIARES
 // ==========================================
 window.openPaymentModal = function() {
     const token = localStorage.getItem('token');
@@ -448,7 +474,7 @@ window.addToCart = function(id) {
         localStorage.setItem('cart', JSON.stringify(cart));
         updateCartUI();
         
-        // Toast
+        // Toast Notificación
         const toast = document.createElement('div');
         toast.className = 'position-fixed bottom-0 start-50 translate-middle-x p-3 mb-3 bg-success text-white rounded shadow';
         toast.style.zIndex = '2000';
@@ -467,8 +493,9 @@ function updateCartUI() {
     }
 }
 
-function logout() { localStorage.clear(); location.href = 'index.html'; }
-
+// ==========================================
+// 8. RESEÑAS
+// ==========================================
 async function loadReviews(pid) {
     const c = document.getElementById('reviewsContainer');
     c.innerHTML = '<small class="text-muted">Cargando...</small>';
@@ -496,7 +523,6 @@ async function loadReviews(pid) {
 async function handleReviewSubmit(e) {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user'));
     
     if(!token) return alert("Inicia sesión para opinar.");
     
@@ -517,18 +543,7 @@ async function handleReviewSubmit(e) {
         });
 
         if(res.ok) {
-            const c = document.getElementById('reviewsContainer');
-            const newReview = `
-                <div class="border border-secondary rounded p-2 mb-2 bg-dark">
-                    <div class="d-flex justify-content-between">
-                        <strong class="text-danger small">${user.name}</strong>
-                        <span class="text-warning small">${'★'.repeat(rateIn.value)}</span>
-                    </div>
-                    <p class="text-light small mb-0 mt-1">${textIn.value}</p>
-                </div>`;
-            
-            if(c.innerHTML.includes('Sé el primero')) c.innerHTML = '';
-            c.insertAdjacentHTML('afterbegin', newReview);
+            loadReviews(currentProductModalId);
             textIn.value = '';
         } else {
             alert("Error al guardar la reseña.");
