@@ -65,7 +65,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Modelado Low Poly',
     image_url: 'https://media.sketchfab.com/models/61766c1e6e1e4b2b803c174f33433a74/thumbnails/121c90a511e742f98712d8822811f6ba/84e355d517804a00bd688cf416dd29b9.jpeg',
-    model_url: '/autos/3.glb'
+    model_url: '/autos/2.glb'
 }
 ,
 {
@@ -75,7 +75,7 @@ async function seedProducts() {
     stock: 10,
     category: 'NASCAR',
     image_url: 'https://s100.iracing.com/wp-content/uploads/2019/05/NASCAR-Cup-Ford-Mustang-1024x576.jpg',
-    model_url: '/autos/4.glb'
+    model_url: '/autos/3.glb'
 }
 ,
 {
@@ -85,7 +85,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Superdeportivo',
     image_url: 'https://bringatrailer.com/wp-content/uploads/2022/12/2019_ford_gt_brightened_008_web-scaled.jpg?fit=940%2C627',
-    model_url: '/autos/5.glb'
+    model_url: '/autos/4.glb'
 }
 ,
 {
@@ -95,7 +95,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Deportivo',
     image_url: 'https://di-uploads-pod12.dealerinspire.com/stingraychevy/uploads/2020/03/Screen-Shot-2020-03-27-at-11.58.54-AM.png',
-    model_url: '/autos/6.glb'
+    model_url: '/autos/5.glb'
 }
 ,
 {
