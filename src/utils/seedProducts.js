@@ -165,7 +165,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Superdeportivo',
     image_url: 'https://puromotor.com/wp-content/uploads/2022/08/2023-porsche-911-gt3-rs-puromotor.jpg',
-    model_url: '/autos/13.glb'
+    model_url: ''
 }
 ,
 {
@@ -175,7 +175,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Hiperauto',
     image_url: 'https://hips.hearstapps.com/es.h-cdn.co/cades/contenidos/47887/apertura-apollo-intensa-emozione-supercar-3.jpg?crop=0.888888888888889xw:1xh;center,top&resize=1200:*',
-    model_url: ''
+    model_url: '/autos/13.glb'
 }
 ,
 {
