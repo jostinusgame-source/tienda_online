@@ -36,7 +36,6 @@
         }
         .form-control:focus { background: #222; border-color: #D40000; box-shadow: 0 0 10px rgba(212, 0, 0, 0.2); color: white; outline: none; }
 
-        /* Estados de validación visual */
         .form-control.is-invalid { border-color: #ff3333; background-image: none; }
         .form-control.is-valid { border-color: #00ff44; background-image: none; }
         
@@ -49,11 +48,8 @@
         }
         .btn-register:hover { background: linear-gradient(45deg, #d40000, #ff0000); transform: translateY(-2px); box-shadow: 0 10px 20px rgba(212, 0, 0, 0.3); }
 
-        /* Ajustes Librería Teléfonos */
         .iti { width: 100%; }
         .iti__country-list { background-color: #1a1a1a; border: 1px solid #444; color: white; }
-        .iti__selected-flag { background-color: #1a1a1a; border-right: 1px solid #333; }
-        
     </style>
 </head>
 <body>
@@ -63,24 +59,28 @@
         <h2>Acceso VIP</h2>
         
         <form id="register-form" novalidate>
+            <!-- NOMBRE -->
             <div class="mb-3">
                 <label class="form-label">Identidad (Nombre Completo)</label>
                 <input type="text" id="reg-name" class="form-control" placeholder="Ej: Juan Perez" autocomplete="off" required>
                 <div class="validation-error" id="name-error">Nombre inválido</div>
             </div>
 
+            <!-- EMAIL -->
             <div class="mb-3">
                 <label class="form-label">Correo Institucional / Personal</label>
                 <input type="email" id="reg-email" class="form-control" placeholder="usuario@dominio.com" autocomplete="off" required>
                 <div class="validation-error" id="email-error">Correo inválido</div>
             </div>
 
+            <!-- TELÉFONO -->
             <div class="mb-3">
                 <label class="form-label">Móvil Verificado</label>
                 <input type="tel" id="reg-phone" class="form-control" required>
                 <div class="validation-error" id="phone-error">Número no reconocido o inválido</div>
             </div>
 
+            <!-- PASSWORD -->
             <div class="mb-3">
                 <label class="form-label">Clave de Seguridad</label>
                 <input type="password" id="reg-pass" class="form-control" placeholder="••••••••••" required>
@@ -98,8 +98,75 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
-    <script src="script.js"></script>
+    
+    <script>
+        // CONFIGURACIÓN TELÉFONO (Google Lib)
+        const phoneInput = document.querySelector("#reg-phone");
+        const iti = window.intlTelInput(phoneInput, {
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+            initialCountry: "auto",
+            geoIpLookup: callback => fetch("https://ipapi.co/json").then(r=>r.json()).then(d=>callback(d.country_code)).catch(()=>callback("co")),
+            preferredCountries: ["co", "mx", "us", "es"]
+        });
+
+        // VALIDACIÓN NOMBRE EN TIEMPO REAL
+        document.getElementById('reg-name').addEventListener('input', function() {
+            const val = this.value;
+            // Regex: 2-3 palabras, sin repetidas, sin chars dobles seguidos
+            const regex = /^(?!.*\b([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)\b.*\b\1\b)(?!.*(.)\2)([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,30})(\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,30}){1,2}$/;
+            const err = document.getElementById('name-error');
+            
+            if(!regex.test(val)) {
+                err.style.display = 'block';
+                err.innerText = "Necesitas 2-3 palabras. No uses letras dobles seguidas (ej: 'aa').";
+                this.classList.add('is-invalid');
+            } else {
+                err.style.display = 'none';
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+
+        // ENVÍO
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('msg');
+            msg.innerText = "";
+            
+            // Validar pass visualmente
+            const pass = document.getElementById('reg-pass').value;
+            const passRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{10,}$/;
+            if(!passRegex.test(pass)) {
+                alert("La contraseña no es segura."); return;
+            }
+
+            try {
+                msg.innerHTML = '<span class="text-warning">Verificando...</span>';
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: document.getElementById('reg-name').value,
+                        email: document.getElementById('reg-email').value,
+                        password: pass,
+                        phone: iti.getNumber()
+                    })
+                });
+                const data = await res.json();
+                
+                if(res.ok) {
+                    msg.innerHTML = '<span class="text-success">¡Registro Exitoso! Redirigiendo...</span>';
+                    setTimeout(() => window.location.href='login.html', 2000);
+                } else {
+                    msg.innerHTML = `<span class="text-danger">${data.message}</span>`;
+                }
+            } catch(err) {
+                msg.innerHTML = '<span class="text-danger">Error de conexión.</span>';
+            }
+        });
+    </script>
 </body>
 </html>

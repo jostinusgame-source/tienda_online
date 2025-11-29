@@ -1,10 +1,10 @@
 /**
  * SPEEDCOLLECT | OFFICIAL SCRIPT
- * Version: Bulletproof
+ * Phase 1: Real Stock & Banking Security
  */
 
 const API_URL = '/api'; 
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
+let cart = []; // El carrito ahora se sincroniza, no vive solo aquí
 let allProducts = [];
 let currentProductModalId = null;
 let itiInstance = null; 
@@ -15,88 +15,139 @@ const DISCOUNT_RATE = 0.20;
 let isOfferActive = false;
 
 // ==========================================
-// 1. DEFINICIÓN DE FUNCIONES GLOBALES (PRIORIDAD ALTA)
+// 1. INICIALIZACIÓN (DOM READY)
 // ==========================================
-// Las definimos aquí arriba para asegurar que existan antes de que alguien haga clic.
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 SpeedCollect System Initialized");
+    
+    // Iniciar Componentes
+    checkAuthStatus();
+    updateCartUI(); // Sincroniza con DB al cargar
+    initChatbot(); 
 
-window.openPaymentModal = function() {
-    console.log("Abriendo carrito...");
+    // Detectar página y cargar módulos
+    const storeContainer = document.getElementById('products-container');
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+    const reviewForm = document.getElementById('reviewForm');
+    const countdownEl = document.getElementById('seconds');
+
+    if (storeContainer) { 
+        initStore(); 
+        if(countdownEl) startCountdown(); 
+    }
+    
+    if (registerForm) initStrictRegister();
+    if (loginForm) initLogin();
+    
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', handleReviewSubmit);
+    }
+});
+
+// ==========================================
+// 2. FUNCIONES GLOBALES (VENTANA)
+// ==========================================
+
+// ABRIR CARRITO (CONECTADO A BASE DE DATOS)
+window.openPaymentModal = async function() {
     const token = localStorage.getItem('token');
     
-    // Validar sesión
+    // Si no está logueado, mostrar alerta
     if (!token) {
-        // Intentar abrir modal de login si existe, sino alert
         const loginModalEl = document.getElementById('loginRequiredModal');
-        if (loginModalEl && window.bootstrap) {
+        if(loginModalEl && window.bootstrap) {
             new bootstrap.Modal(loginModalEl).show();
         } else {
-            // Fallback seguro si el modal no carga
-            if(confirm("Debes iniciar sesión para ver tu garaje. ¿Ir al login?")) {
-                window.location.href = 'login.html';
-            }
+            alert("Por favor inicia sesión para ver tu garaje.");
+            window.location.href = 'login.html';
         }
         return;
     }
     
-    // Renderizar Carrito
-    const list = document.getElementById('cart-items');
-    const totalEl = document.getElementById('cart-total');
-    let total = 0;
-    
-    if (list) {
-        if (cart.length === 0) {
-            list.innerHTML = '<p class="text-center text-secondary py-3">Tu garaje está vacío.</p>';
+    // Obtener datos reales del servidor
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if(!res.ok) throw new Error("Error cargando garaje");
+        
+        const data = await res.json(); // { items: [...], total: 0 }
+        
+        const list = document.getElementById('cart-items');
+        const totalEl = document.getElementById('cart-total');
+        
+        // Guardamos para el PDF
+        window.currentCartItems = data.items;
+        window.currentCartTotal = data.total;
+
+        if (data.items.length === 0) {
+            list.innerHTML = '<p class="text-center text-muted py-4">Tu garaje está vacío.</p>';
         } else {
-            list.innerHTML = cart.map(item => {
-                const itemTotal = item.price * item.quantity;
-                total += itemTotal;
-                return `
-                <div class="d-flex justify-content-between align-items-center mb-2 border-bottom border-secondary pb-2">
-                    <div>
-                        <span class="fw-bold text-white me-2">${item.quantity}x</span> 
-                        <span class="text-light small">${item.name}</span>
-                    </div>
-                    <span class="text-success fw-bold">$${itemTotal.toFixed(2)}</span>
-                </div>`;
-            }).join('');
+            list.innerHTML = data.items.map(item => `
+            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
+                <div>
+                    <span class="fw-bold text-white me-2">${item.quantity}x</span> 
+                    <span class="text-light">${item.name}</span>
+                </div>
+                <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+            </div>`).join('');
         }
-    }
-    
-    if (totalEl) totalEl.innerText = `$${total.toFixed(2)}`;
-    
-    const paymentModalEl = document.getElementById('paymentModal');
-    if (paymentModalEl && window.bootstrap) {
-        new bootstrap.Modal(paymentModalEl).show();
+        
+        if(totalEl) totalEl.innerText = `$${parseFloat(data.total).toFixed(2)}`;
+        
+        const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+        paymentModal.show();
+
+    } catch (e) {
+        console.error(e);
+        alert("No se pudo sincronizar el garaje con el servidor.");
     }
 };
 
-window.addToCart = function(id, priceOverride) {
-    const product = allProducts.find(p => p.id === id);
-    if (!product) return;
-
-    const existingItem = cart.find(i => i.id === id);
-    const finalPrice = priceOverride || (isOfferActive ? product.price * (1 - DISCOUNT_RATE) : product.price);
+// AÑADIR (RESERVA REAL EN STOCK)
+window.addToCart = async function(id) {
+    const token = localStorage.getItem('token');
     
-    if (existingItem) {
-        existingItem.quantity++;
-    } else {
-        cart.push({ ...product, price: finalPrice, quantity: 1 });
+    if (!token) {
+        alert("🔒 Debes iniciar sesión para reservar este auto (Stock Limitado).");
+        return;
     }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
-    updateCartUI();
-    
-    // Feedback visual en consola o alerta suave
-    console.log(`Añadido: ${product.name}`);
+
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ productId: id, quantity: 1 })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            // Éxito: El stock ha sido apartado
+            alert(`✅ ${data.message}`);
+            updateCartUI(); // Actualizar contador
+        } else {
+            // Error: Stock insuficiente, etc.
+            alert(`⚠️ ${data.message}`);
+        }
+    } catch (e) {
+        alert("Error de conexión al reservar.");
+    }
 };
 
+// MODAL DE DETALLE (VISUALIZACIÓN)
 window.openModal = function(id) {
     const p = allProducts.find(x => x.id === id);
     if (!p) return;
     
     currentProductModalId = id;
     
-    // Precios
+    // Calcular Precio Visual
     let price = parseFloat(p.price);
     let htmlPrice = `<span class="text-danger fw-bold fs-2">$${price.toFixed(2)}</span>`;
     
@@ -109,91 +160,84 @@ window.openModal = function(id) {
             </div>`;
     }
 
-    // Elementos del DOM (con chequeo de seguridad)
-    const elName = document.getElementById('modal-p-name');
-    const elDesc = document.getElementById('modal-p-desc');
-    const elPrice = document.getElementById('modal-p-price');
-    const elStock = document.getElementById('modal-p-stock');
-    const elVisual = document.getElementById('visual-container');
+    // Rellenar Datos
+    document.getElementById('modal-p-name').innerText = p.name;
+    document.getElementById('modal-p-desc').innerText = p.description;
+    document.getElementById('modal-p-price').innerHTML = htmlPrice;
+    
+    const stockEl = document.getElementById('modal-p-stock');
+    if(stockEl) {
+        stockEl.innerHTML = p.stock > 0 
+            ? `<span class="text-success"><i class="fa-solid fa-check"></i> Disponible (${p.stock})</span>` 
+            : '<span class="text-danger"><i class="fa-solid fa-xmark"></i> Agotado</span>';
+    }
 
-    if (elName) elName.innerText = p.name;
-    if (elDesc) elDesc.innerText = p.description;
-    if (elPrice) elPrice.innerHTML = htmlPrice;
-    if (elStock) elStock.innerHTML = p.stock > 0 
-        ? `<span class="text-success"><i class="fa-solid fa-check"></i> Disponible (${p.stock})</span>` 
-        : '<span class="text-danger">Agotado</span>';
-
-    // 3D o Imagen
-    if (elVisual) {
-        if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf'))) {
-            elVisual.innerHTML = `
-                <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
+    // Lógica 3D vs Imagen
+    const visualContainer = document.getElementById('visual-container');
+    if(visualContainer) {
+        // Detectar si es un archivo GLB local o URL externa
+        if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf') || p.model_url.includes('googleusercontent'))) {
+            // Usar Model Viewer
+            visualContainer.innerHTML = `
+                <div class="ratio ratio-16x9 bg-dark border border-secondary rounded overflow-hidden shadow">
                     <model-viewer 
                         src="${p.model_url}" 
                         alt="${p.name}" 
                         auto-rotate 
                         camera-controls 
                         shadow-intensity="1"
-                        style="width: 100%; height: 100%;"
+                        style="width: 100%; height: 100%; background-color: #151515;"
                     ></model-viewer>
+                    <div class="position-absolute bottom-0 w-100 text-center text-white-50 small py-1" style="background:rgba(0,0,0,0.6)">
+                        <i class="fa-solid fa-hand-pointer"></i> Arrastra para rotar 360°
+                    </div>
                 </div>`;
         } else {
-            const img = p.image_url || 'https://via.placeholder.com/800x600';
-            elVisual.innerHTML = `<img src="${img}" class="img-fluid rounded border border-secondary w-100">`;
+            // Imagen Estática
+            const img = p.image_url || 'https://via.placeholder.com/800x600?text=No+Image';
+            visualContainer.innerHTML = `
+                <img src="${img}" class="img-fluid rounded border border-secondary w-100 shadow" 
+                     style="max-height: 400px; object-fit: cover;">`;
         }
     }
     
-    // Cargar reseñas si la función existe
-    if (typeof loadReviews === 'function') loadReviews(id);
-    
-    const modalEl = document.getElementById('productModal');
-    if (modalEl && window.bootstrap) {
-        new bootstrap.Modal(modalEl).show();
-    }
+    loadReviews(id);
+    const modal = new bootstrap.Modal(document.getElementById('productModal'));
+    modal.show();
 };
 
-window.checkout = function() {
-    if (!window.jspdf) {
-        alert("El sistema de PDF no está listo. Recarga la página.");
-        return;
-    }
-    
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const user = JSON.parse(localStorage.getItem('user'));
-    
-    doc.setFillColor(10, 10, 10);
-    doc.rect(0, 0, 210, 297, 'F'); // Fondo negro
-    
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.text("SPEEDCOLLECT RECIBO", 15, 20);
-    
-    doc.setFontSize(12);
-    doc.text(`Cliente: ${user ? user.name : 'Invitado'}`, 15, 40);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 50);
+// CHECKOUT (TRANSACCIÓN FINAL + PDF)
+window.checkout = async function() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-    const body = cart.map(i => [i.quantity, i.name, `$${i.price.toFixed(2)}`]);
-    doc.autoTable({
-        startY: 60,
-        head: [['Cant', 'Auto', 'Precio']],
-        body: body,
-        theme: 'grid',
-        headStyles: { fillColor: [200, 0, 0] }
-    });
+    if (!confirm("¿Confirmar compra y debitar de tu cuenta?")) return;
 
-    doc.save(`Recibo_${Date.now()}.pdf`);
-    
-    // Limpiar
-    cart = [];
-    localStorage.removeItem('cart');
-    updateCartUI();
-    
-    const modalEl = document.getElementById('paymentModal');
-    if (modalEl && window.bootstrap) {
-        bootstrap.Modal.getInstance(modalEl).hide();
+    try {
+        const res = await fetch(`${API_URL}/store/checkout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            // Generar PDF usando los items que teníamos en memoria
+            generatePDF(window.currentCartItems, data.total, data.orderId);
+            
+            alert("¡COMPRA EXITOSA! El auto es legalmente tuyo.");
+            updateCartUI(); // Resetear contador
+            
+            const modalEl = document.getElementById('paymentModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+            
+        } else {
+            alert(`❌ Error: ${data.message}`);
+        }
+    } catch (e) {
+        alert("Error procesando la transacción.");
     }
-    alert("¡Compra realizada!");
 };
 
 window.logout = function() {
@@ -202,33 +246,7 @@ window.logout = function() {
 };
 
 // ==========================================
-// 2. INICIALIZACIÓN (DOM LOAD)
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    try {
-        checkAuthStatus();
-        updateCartUI();
-        
-        // Elementos condicionales
-        const productsContainer = document.getElementById('products-container');
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        
-        if (productsContainer) initStore();
-        if (document.getElementById('seconds')) startCountdown();
-        
-        initChatbot(); // Chat siempre activo si el HTML existe
-
-        if (loginForm) initLogin();
-        if (registerForm) initStrictRegister();
-
-    } catch (e) {
-        console.error("Error en inicialización:", e);
-    }
-});
-
-// ==========================================
-// 3. LÓGICA INTERNA
+// 3. LÓGICA DE TIENDA (CATÁLOGO)
 // ==========================================
 
 async function initStore() {
@@ -247,7 +265,7 @@ async function initStore() {
             renderProducts('all');
         }
 
-        // Listeners Filtros
+        // Filtros
         document.querySelectorAll('#category-filters button').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
@@ -256,10 +274,11 @@ async function initStore() {
             });
         });
 
-        // Listeners Búsqueda
+        // Búsqueda
         const searchInput = document.getElementById('search-input');
         if (searchInput) searchInput.addEventListener('input', applyFilters);
         
+        // Precio
         const priceRange = document.getElementById('price-range');
         if (priceRange) {
             priceRange.addEventListener('input', (e) => {
@@ -317,11 +336,11 @@ function renderProducts(filter, list = null) {
             <div class="card custom-card h-100 shadow" style="background:#111; border:1px solid #333;" onclick="openModal(${p.id})">
                 <div class="position-relative overflow-hidden" style="height:250px;">
                     <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
-                    ${p.model_url ? '<span class="position-absolute bottom-0 end-0 m-2 badge bg-black border border-secondary">3D</span>' : ''}
+                    ${p.model_url ? '<span class="position-absolute bottom-0 end-0 m-2 badge bg-black border border-secondary text-white">3D</span>' : ''}
                     ${isOut ? '<div class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 d-flex align-items-center justify-content-center text-white fw-bold">AGOTADO</div>' : ''}
                 </div>
                 <div class="card-body bg-black text-white border-top border-secondary">
-                    <h5 class="text-truncate fw-bold">${p.name}</h5>
+                    <h5 class="text-truncate fw-bold brand-font" style="font-size:1rem">${p.name}</h5>
                     <div class="d-flex justify-content-between align-items-center mt-3">
                         ${priceHtml}
                         <button class="btn btn-outline-danger btn-sm rounded-circle p-2" onclick="event.stopPropagation(); addToCart(${p.id})"><i class="fa-solid fa-cart-plus"></i></button>
@@ -332,14 +351,24 @@ function renderProducts(filter, list = null) {
     }).join('');
 }
 
-// UTILIDADES
-function updateCartUI() {
+// ==========================================
+// 4. UTILIDADES (PDF, AUTH, CHATBOT)
+// ==========================================
+
+async function updateCartUI() {
+    const token = localStorage.getItem('token');
     const el = document.getElementById('cart-count');
-    if (el) {
-        const q = cart.reduce((a,b) => a + b.quantity, 0);
-        el.innerText = q;
-        el.style.display = q > 0 ? 'block' : 'none';
-    }
+    if (!el || !token) return;
+
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, { headers: { 'Authorization': `Bearer ${token}` } });
+        if(res.ok) {
+            const data = await res.json();
+            const count = data.items.reduce((acc, item) => acc + item.quantity, 0);
+            el.innerText = count;
+            el.style.display = count > 0 ? 'block' : 'none';
+        }
+    } catch(e) {}
 }
 
 function checkAuthStatus() {
@@ -358,6 +387,27 @@ function checkAuthStatus() {
     } catch(e) {}
 }
 
+function generatePDF(items, total, orderId) {
+    if (!window.jspdf) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    doc.setFillColor(10, 10, 10); doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text("SPEEDCOLLECT", 15, 20);
+    
+    doc.setTextColor(0,0,0); doc.setFontSize(12);
+    doc.text(`Orden #: ${orderId}`, 15, 50);
+    doc.text(`Cliente: ${user.name}`, 15, 58);
+
+    const body = items.map(i => [i.quantity, i.name, `$${i.price}`, `$${(i.price*i.quantity).toFixed(2)}`]);
+    doc.autoTable({ startY: 70, head: [['Cant', 'Modelo', 'Unit', 'Total']], body: body });
+    
+    doc.text(`TOTAL: $${parseFloat(total).toFixed(2)}`, 140, doc.lastAutoTable.finalY + 15);
+    doc.save(`Factura_${orderId}.pdf`);
+}
+
+// OFERTA Y CHATBOT
 function startCountdown() {
     let time = 600;
     setInterval(() => {
@@ -392,7 +442,7 @@ function initChatbot() {
         input.value = '';
         body.scrollTop = body.scrollHeight;
         setTimeout(() => {
-            body.innerHTML += `<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Contáctanos por WhatsApp para soporte.</span></div>`;
+            body.innerHTML += `<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Para soporte técnico, usa el WhatsApp.</span></div>`;
             body.scrollTop = body.scrollHeight;
         }, 1000);
     };
@@ -401,7 +451,7 @@ function initChatbot() {
     if(input) input.onkeypress = (e) => { if(e.key === 'Enter') sendMsg(); };
 }
 
-// LOGIN Y REGISTRO (Simplificado para evitar errores)
+// LOGIN Y REGISTRO
 function initLogin() {
     const f = document.getElementById('login-form');
     if(f) f.addEventListener('submit', async e => {
@@ -429,7 +479,6 @@ function initStrictRegister() {
     const f = document.getElementById('register-form');
     const pInput = document.getElementById('reg-phone');
     
-    // Iniciar librería solo si existe
     if(pInput && window.intlTelInput) {
         itiInstance = window.intlTelInput(pInput, { 
             utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
@@ -465,7 +514,6 @@ function initStrictRegister() {
 
 // RESEÑAS
 async function loadReviews(pid) {
-    // Implementación simple para evitar errores
     const c = document.getElementById('reviewsContainer');
     if(c) {
         try {
@@ -480,7 +528,6 @@ async function handleReviewSubmit(e) {
     e.preventDefault();
     const token = localStorage.getItem('token');
     if(!token) return alert("Inicia sesión.");
-    
     const txt = document.getElementById('review-comment').value;
     if(!txt) return;
 

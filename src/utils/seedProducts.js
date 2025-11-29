@@ -4,9 +4,8 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 async function seedProducts() {
-    console.log('🔧 CARGANDO TUS AUTOS DESCARGADOS...');
+    console.log('🔧 ACTUALIZANDO ESTRUCTURA DB (Fase 1: Seguridad y Stock)...');
     
-    // Conexión
     const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
         user: process.env.DB_USER,
@@ -15,18 +14,88 @@ async function seedProducts() {
         port: process.env.DB_PORT
     });
 
-    // 1. Limpieza rápida
-    await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
-    await connection.execute('TRUNCATE TABLE products'); // Solo borra productos, mantiene usuarios
-    await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+    try {
+        // 1. Limpieza (Ordenada para evitar errores de llaves foráneas)
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+        const tables = ['reservations', 'promotions', 'reviews', 'order_items', 'orders', 'products', 'users'];
+        for (const t of tables) await connection.execute(`DROP TABLE IF EXISTS ${t}`);
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
 
-    // -----------------------------------------------------------------------
-    // 📝 TU LISTA DE AUTOS (EDITA AQUÍ)
-    // -----------------------------------------------------------------------
-    // INSTRUCCIONES:
-    // 1. 'image_url': Pon el link de internet de la foto de portada.
-    // 2. 'model_url': Pon '/autos/NOMBRE_DEL_ARCHIVO.glb' (si lo metiste en src/public/autos)
-    
+        // 2. CREACIÓN DE TABLAS (ACTUALIZADAS)
+        
+        // Usuarios: Agregamos campos para bloqueo de seguridad y verificación
+        await connection.execute(`
+            CREATE TABLE users (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                name VARCHAR(255), 
+                email VARCHAR(255) UNIQUE, 
+                password VARCHAR(255), 
+                phone VARCHAR(50), 
+                role VARCHAR(20) DEFAULT 'client',
+                is_verified BOOLEAN DEFAULT FALSE,
+                failed_attempts INT DEFAULT 0,
+                lock_until TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Productos: Agregamos precio base (para descuentos) y galería
+        await connection.execute(`
+            CREATE TABLE products (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                name VARCHAR(255), 
+                description TEXT, 
+                base_price DECIMAL(10,2), -- Precio original
+                price DECIMAL(10,2),      -- Precio actual (con descuento)
+                stock INT, 
+                category VARCHAR(50), 
+                image_url VARCHAR(500), 
+                gallery JSON,             -- Para múltiples fotos
+                model_url VARCHAR(500), 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // NUEVO: Tabla de Promociones (Venta Nocturna)
+        await connection.execute(`
+            CREATE TABLE promotions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100),
+                discount_percent DECIMAL(5,2),
+                is_active BOOLEAN DEFAULT FALSE
+            )
+        `);
+
+        // NUEVO: Tabla de Reservas (Para evitar sobreventa en carrito)
+        await connection.execute(`
+            CREATE TABLE reservations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_id INT,
+                quantity INT,
+                expires_at TIMESTAMP,
+                status ENUM('active', 'expired', 'completed') DEFAULT 'active',
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (product_id) REFERENCES products(id)
+            )
+        `);
+
+        // Tablas auxiliares (Reviews, Orders...)
+        await connection.execute(`CREATE TABLE reviews (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, product_id INT, rating INT, comment TEXT, approved BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`);
+        await connection.execute(`CREATE TABLE orders (id INT AUTO_INCREMENT PRIMARY KEY, user_email VARCHAR(255), total DECIMAL(10,2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+        await connection.execute(`CREATE TABLE order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id INT, product_name VARCHAR(255), quantity INT, price DECIMAL(10,2))`);
+
+        // 3. DATOS INICIALES
+        
+        // Admin
+        const pass = await bcrypt.hash('admin123', 10);
+        await connection.execute(`INSERT INTO users (name, email, password, phone, role, is_verified) VALUES (?, ?, ?, ?, ?, ?)`, ['The Boss', 'jsusgamep@itc.edu.co', pass, '3222625352', 'admin', true]);
+
+        // Promo Base
+        await connection.execute(`INSERT INTO promotions (name, discount_percent, is_active) VALUES ('Venta Nocturna', 0.20, 0)`);
+
+        // -----------------------------------------------------------------------
+        // 📝 TU LISTA DE AUTOS (MANTENIDA)
     const misAutos = [
         {
             name: 'Chevrolet Corvette 1957',
@@ -361,26 +430,24 @@ async function seedProducts() {
     }
     ];
 
-    // Inserción
-    console.log(`📦 Insertando ${misAutos.length} autos...`);
-    
-    for (const auto of misAutos) {
-        await connection.execute(
-            'INSERT INTO products (name, description, price, stock, category, image_url, model_url) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-            [
-                auto.name, 
-                auto.description, 
-                auto.price, 
-                auto.stock, 
-                auto.category, 
-                auto.image_url,     
-                auto.model_url    
-            ]
-        );
-    }
+     console.log(`📦 Insertando ${misAutos.length} autos...`);
+        
+        for (const auto of misAutos) {
+            // Insertamos precio en base_price y price iguales al inicio
+            await connection.execute(
+                'INSERT INTO products (name, description, base_price, price, stock, category, image_url, model_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
+                [auto.name, auto.description, auto.price, auto.price, auto.stock, auto.category, auto.image_url, auto.model_url]
+            );
+        }
 
-    console.log('✅ ¡AUTOS CARGADOS! Reinicia el servidor y prueba.');
-    process.exit();
+        console.log('✅ BASE DE DATOS ACTUALIZADA CON SEGURIDAD.');
+
+    } catch (error) {
+        console.error('❌ Error:', error);
+    } finally {
+        await connection.end();
+        process.exit();
+    }
 }
 
 seedProducts();

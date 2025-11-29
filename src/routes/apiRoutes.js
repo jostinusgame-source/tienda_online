@@ -1,36 +1,33 @@
 const express = require('express');
 const router = express.Router();
 
-// Importar Controladores
+// Controladores
 const authController = require('../controllers/authController');
 const storeController = require('../controllers/storeController');
 const reviewController = require('../controllers/reviewController');
-const { chatWithConcierge } = require('../controllers/aiController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // ==========================
-// 1. RUTAS DE TIENDA (Públicas) - ESTAS ERAN LAS QUE FALLABAN
+// RUTAS PÚBLICAS
 // ==========================
-router.get('/store/products', storeController.getProducts); // Esta carga el catálogo
-router.get('/products/:productId/reviews', reviewController.getProductReviews); // Esta carga reseñas
-
-// ==========================
-// 2. RUTAS DE AUTH (Públicas)
-// ==========================
+router.get('/store/products', storeController.getProducts); 
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
+router.get('/products/:productId/reviews', reviewController.getProductReviews);
 
 // ==========================
-// 3. RUTAS PROTEGIDAS (Requieren Login)
+// RUTAS PROTEGIDAS (Requieren Token)
 // ==========================
-// Comprar
-router.post('/store/order', authMiddleware.protect, storeController.createOrder);
-// Publicar Reseña
+
+// 1. Carrito y Compras (NUEVO)
+router.post('/store/cart', authMiddleware.protect, storeController.addToCart); // Agregar/Reservar
+router.get('/store/cart', authMiddleware.protect, storeController.getCart);    // Ver Carrito
+router.post('/store/checkout', authMiddleware.protect, storeController.checkout); // Pagar
+
+// 2. Reseñas
 router.post('/reviews', authMiddleware.protect, reviewController.addReview);
-// Chat IA
-router.post('/ai/chat', chatWithConcierge);
 
-// Admin (Opcional)
+// 3. Admin
 router.get('/auth/users', authMiddleware.protect, authMiddleware.adminOnly, authController.getAllUsers);
 router.delete('/auth/users/:id', authMiddleware.protect, authMiddleware.adminOnly, authController.deleteUser);
 
