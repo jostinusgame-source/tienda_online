@@ -34,8 +34,8 @@ async function seedProducts() {
             price: 200000,
             stock: 5,
             category: 'Clásicos',
-            image_url: 'https://cdnb.artstation.com/p/assets/images/images/001/233/693/large/barba-rossa-olds-01.jpg?1442686432', // Foto portada
-            model_url: '/autos/1957.glb' 
+            image_url: 'https://cdn.dealeraccelerate.com/cam/34/1801/73290/1920x1440/1957-chevrolet-corvette-roadster', // Foto portada
+            model_url: '' 
         },
         // Copia este bloque para agregar otro auto:
        {
@@ -125,7 +125,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Deportivo',
     image_url: 'https://fotos.perfil.com/2019/08/30/trim/876/492/corvette-770541.jpg',
-    model_url: '/autos/8.glb'
+    model_url: ''
 }
 ,
 {
@@ -135,7 +135,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Fórmula 1',
     image_url: 'https://cdn-8.motorsport.com/images/amp/0k7zJ1A0/s1000/aston-martin-23-1.jpg',
-    model_url: '/autos/9.glb'
+    model_url: ''
 }
 ,
 {
@@ -155,7 +155,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Fórmula 1',
     image_url: 'https://acnews.blob.core.windows.net/imgnews/large/NAZ_2f922f2a2f024e499aeb4be487a8889c.webp',
-    model_url: '/autos/11.glb'
+    model_url: ''
 }
 ,
 {
@@ -187,7 +187,178 @@ async function seedProducts() {
     image_url: 'https://d63oxfkn1m8sf.cloudfront.net/3000x1876/7017/3982/6098/c4503_1.jpg%3Ffit%3D1',
     model_url: '/autos/14.glb'
 }
-
+,
+ {
+        name: '1950 Lincoln Cosmopolitan Presidential Limousine',
+        description: 'Una limusina histórica con presencia imponente, diseño clásico de lujo y un interior amplio digno de un vehículo presidencial. Es un ícono de elegancia americana y una pieza coleccionable única.',
+        price: 540000,
+        stock: 10,
+        category: 'Clásico',
+        image_url: 'https://image.invaluable.com/housePhotos/bssauction/19/721119/H1285-L285068557_original.jpg',
+        model_url: ''
+    },
+    {
+        name: 'Toyota Hilux Champ',
+        description: 'Una pickup resistente y versátil, diseñada para soportar trabajo pesado con fiabilidad absoluta. Su durabilidad legendaria la convierte en la compañera perfecta para cualquier terreno.',
+        price: 220000,
+        stock: 10,
+        category: 'Pickup',
+        image_url: 'https://www.toyotahiluxchamp.com/wp-content/uploads/2023/12/GREY-Metallic.jpg',
+        model_url: ''
+    },
+    {
+        name: '2005 Toyota Hilux Double Cab',
+        description: 'Una camioneta robusta con doble cabina, capaz de enfrentar rutas difíciles mientras brinda comodidad y espacio para toda la familia. Una mezcla perfecta entre utilidad y rendimiento.',
+        price: 260000,
+        stock: 10,
+        category: 'Pickup',
+        image_url: 'https://360view.3dmodels.org/zoom/Toyota/Toyota_Hilux_Mk6_DoubleCab_2001_1000_0001.jpg',
+        model_url: ''
+    },
+    {
+        name: '2005 BMW M3 GTR Need For Speed: Most Wanted',
+        description: 'La leyenda de NFS Most Wanted: un M3 con aerodinámica agresiva, potencia extrema y un diseño icónico que marcó a toda una generación de gamers y amantes del motorsport.',
+        price: 890000,
+        stock: 10,
+        category: 'Deportivo',
+        image_url: 'https://media.sketchfab.com/models/2999936a393340c0a389c6bd31961a63/thumbnails/97ea33374cc149ce84c8db43458f403c/7667062d30f74fdbac743beda1a9a8d1.jpeg',
+        model_url: ''
+    },
+    {
+        name: '1988 BMW M3 Evolution II (E30)',
+        description: 'Un clásico del mundo europeo, famoso por su equilibrio, su motor de alto rendimiento y su conducción precisa. El E30 Evo II es una joya codiciada por coleccionistas.',
+        price: 610000,
+        stock: 10,
+        category: 'Clásico Deportivo',
+        image_url: 'https://bringatrailer.com/wp-content/uploads/2023/04/pics4cars.com-6-47712-scaled.jpg?fit=940%2C627',
+        model_url: ''
+    },
+    {
+        name: '2017 Pandem BMW E30 V1.5 Bodykit',
+        description: 'Un E30 transformado radicalmente con el bodykit Pandem V1.5: postura ancha, estilo agresivo y presencia visual que rompe miradas. Perfecto para exhibiciones y cultura stance.',
+        price: 340000,
+        stock: 10,
+        category: 'Modificado',
+        image_url: 'https://pandemusa.com/cdn/shop/files/57_280_1000x1000.jpg?v=1750290922',
+        model_url: ''
+    },
+    {
+        name: '2016 Pandem - Nissan GTR (R35) V2 with Duck Tail',
+        description: 'Un Nissan GT-R R35 modificado con el kit Pandem V2, incluyendo un duck tail imponente y líneas agresivas que resaltan su carácter salvaje y su potencia brutal.',
+        price: 720000,
+        stock: 10,
+        category: 'JDM Modificado',
+        image_url: 'https://pandemusa.com/cdn/shop/files/35_242_1000x1000.jpg?v=1750264427',
+        model_url: ''
+    },
+    {
+        name: '2022 LB-Silhouette WORKS GT NISSAN 35GT-RR (R35)',
+        description: 'Un R35 completamente transformado por Liberty Walk: estética extrema, ensanches masivos y una actitud única. Un espectáculo visual y mecánico para los amantes del tuning.',
+        price: 850000,
+        stock: 10,
+        category: 'JDM Modificado',
+        image_url: 'https://media.sketchfab.com/models/19287829a2564641b586670e317fb22c/thumbnails/1005b6ef75674d47ba91ebd2dc8d1d03/f1fee19963cf47d2a0c7197a670d3430.jpeg',
+        model_url: ''
+    },
+    {
+        name: '2014 Rocket Bunny Nissan GTR (R35) V1 Aero',
+        description: 'El famoso kit Rocket Bunny V1, que convierte al GT-R en una bestia de presencia agresiva con líneas anchas y aerodinámica enfocada en estilo y rendimiento.',
+        price: 690000,
+        stock: 10,
+        category: 'JDM Modificado',
+        image_url: 'https://ltmotorwerks.com/cdn/shop/products/3_1024x1024.jpg?v=1485916290',
+        model_url: ''
+    },
+    {
+        name: '2011 BenSopra Full Aero Kit for Nissan GT-R R35',
+        description: 'Un GT-R radical equipado con el kit BenSopra, famoso por su aerodinámica extrema y su estilo de competición pura. Uno de los diseños más agresivos jamás creados para el R35.',
+        price: 770000,
+        stock: 10,
+        category: 'JDM Modificado',
+        image_url: 'https://speedhunters-wp-production.s3.amazonaws.com/wp-content/uploads/2011/10/14085000/BSR35-1.jpg',
+        model_url: ''
+    },
+    {
+        name: '1999 Nissan Skyline GT-R (R34) R3',
+        description: 'El mítico R34, una leyenda del JDM, conocido por su tracción ATTESA, su turbo poderoso y una reputación que lo coloca como uno de los coches más deseados del mundo.',
+        price: 830000,
+        stock: 10,
+        category: 'JDM',
+        image_url: 'https://media.sketchfab.com/models/a0300a4c5e664d379d1fbbf52deca81e/thumbnails/c65f6582df40426f819c4793a8830212/93006feef5474ab88192d2616c095a2b.jpeg',
+        model_url: ''
+    },
+    {
+        name: '2018 Nissan GT-R Nismo R3',
+        description: 'El GT-R Nismo ofrece un rendimiento salvaje, aerodinámica extrema y una precisión de manejo propia de un superdeportivo japonés de élite.',
+        price: 880000,
+        stock: 10,
+        category: 'JDM Deportivo',
+        image_url: 'https://cdn.motor1.com/images/mgl/Bbg6A/s3/2018-nissan-gt-r-nismo-gt3.jpg',
+        model_url: ''
+    },
+    {
+        name: '1989 Nissan Skyline GT-R (R32)',
+        description: 'El famoso “Godzilla”, un ícono del automovilismo japonés. Ligero, potente y con una tracción inteligente que dominó competiciones en los 90. Un verdadero monstruo JDM.',
+        price: 510000,
+        stock: 10,
+        category: 'JDM Clásico',
+        image_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Nissan_Skyline_R32_GT-R_001.jpg/1200px-Nissan_Skyline_R32_GT-R_001.jpg',
+        model_url: ''
+    },
+    {
+        name: '2022 LB-Silhouette WORKS GT NISSAN 35GT-RR (R35) II',
+        description: 'La versión más reciente del kit LB-Silhouette, con detalles más agresivos, mejor aerodinámica y un diseño descomunal perfecto para fanáticos del tuning extremo.',
+        price: 860000,
+        stock: 10,
+        category: 'JDM Modificado',
+        image_url: 'https://media.sketchfab.com/models/19287829a2564641b586670e317fb22c/thumbnails/1005b6ef75674d47ba91ebd2dc8d1d03/f1fee19963cf47d2a0c7197a670d3430.jpeg',
+        model_url: ''
+    },
+    {
+        name: '2016 Arrinera Hussarya GT',
+        description: 'Un superdeportivo poco común, construido con fibra de carbono y diseñado para competir. Su potencia y ligereza lo convierten en una máquina exótica y feroz.',
+        price: 870000,
+        stock: 10,
+        category: 'Superdeportivo',
+        image_url: 'https://static.designboom.com/wp-content/uploads/2016/08/13502892_1745334779085786_5404433001876697154_o.jpg',
+        model_url: ''
+    },
+    {
+        name: '2016 Ford GT LM',
+        description: 'Versión de competición del Ford GT, enfocada completamente en rendimiento. Aerodinámica extrema y potencia brutal diseñada para dominar las pistas más exigentes.',
+        price: 900000,
+        stock: 10,
+        category: 'Competición',
+        image_url: 'https://media.ford.com/content/fordmedia/feu/gb/en/news/2015/06/12/ford-gt-le-mans/jcr:content/image.img.881.495.jpg/1500062676084.jpg',
+        model_url: ''
+    },
+    {
+        name: '2019 Ford GT LM',
+        description: 'Una evolución moderna del modelo LM, con mejoras en aerodinámica, motor y estabilidad. Un superdeportivo de élite pensado para corredores serios.',
+        price: 880000,
+        stock: 10,
+        category: 'Competición',
+        image_url: 'https://www.imsa.com/wp-content/uploads/sites/32/2019/11/ford-50-980.jpg',
+        model_url: ''
+    },
+    {
+        name: '2019 BYD E-SEED GT',
+        description: 'Un deportivo eléctrico futurista con líneas agresivas, tecnología avanzada y aceleración inmediata. Representa la nueva era de rendimiento sustentable.',
+        price: 650000,
+        stock: 10,
+        category: 'Eléctrico Deportivo',
+        image_url: 'https://www.bydeurope.com/snews/images/20190417/03.jpg',
+        model_url: ''
+    },
+    {
+        name: '2024 BYD Yangwang U9',
+        description: 'Un hiperauto eléctrico con tecnología de suspensión inteligente, aceleración brutal y diseño futurista. Un monstruo moderno que redefine el rendimiento EV.',
+        price: 900000,
+        stock: 10,
+        category: 'Hiperauto Eléctrico',
+        image_url: 'https://hesucar.com/wp-content/uploads/2024/01/byd-yangwang-u9-hesucar-1.jpg',
+        model_url: ''
+    }
     ];
 
     // Inserción
