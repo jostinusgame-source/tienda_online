@@ -1,22 +1,27 @@
-console.log("🔵 [DEBUG] Cargando archivo aiRoutes.js...");
-
 const express = require('express');
 const router = express.Router();
 
-// Importar controlador
-const { chatWithConcierge } = require('../controllers/aiController');
+const authController = require('../controllers/authController');
+const storeController = require('../controllers/storeController');
+const reviewController = require('../controllers/reviewController'); // Asegúrate que este archivo exista
+const authMiddleware = require('../middleware/authMiddleware');
 
-// Verificar si el controlador cargó bien
-if (!chatWithConcierge) {
-    console.error("🔴 [DEBUG] ¡CUIDADO! chatWithConcierge es undefined. Revisa aiController.js");
-} else {
-    console.log("🔵 [DEBUG] Controlador cargado correctamente.");
-}
+// --- PÚBLICAS ---
+router.get('/', (req, res) => res.send('API Online'));
+router.post('/auth/register', authController.register);
+router.post('/auth/login', authController.login);
+router.get('/store/products', storeController.getProducts);
+router.get('/products/:productId/reviews', reviewController.getProductReviews);
 
-// Definir ruta
-router.post('/chat', chatWithConcierge);
+// --- PROTEGIDAS (Cliente) ---
+router.post('/store/cart', authMiddleware.protect, storeController.addToCart);
+router.get('/store/cart', authMiddleware.protect, storeController.getCart);
+router.post('/store/checkout', authMiddleware.protect, storeController.checkout);
+router.post('/reviews', authMiddleware.protect, reviewController.addReview);
 
-console.log("🔵 [DEBUG] Exportando router...");
+// --- ADMIN (Ahora authController tiene estas funciones, así que no dará error) ---
+router.get('/auth/users', authMiddleware.protect, authMiddleware.adminOnly, authController.getAllUsers);
+router.delete('/auth/users/:id', authMiddleware.protect, authMiddleware.adminOnly, authController.deleteUser);
+// router.post('/store/toggle-night-sale', authMiddleware.protect, authMiddleware.adminOnly, storeController.toggleNightSale);
 
-// Exportación
 module.exports = router;

@@ -4,65 +4,63 @@ const pool = require('../config/database');
 const { PhoneNumberUtil } = require('google-libphonenumber');
 const phoneUtil = PhoneNumberUtil.getInstance();
 
-// 1. VALIDACIONES ESTRICTAS
+// REGEX
 const NAME_REGEX = /^(?!.*\b([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)\b.*\b\1\b)(?!.*(.)\2)([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,30})(\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,30}){1,2}$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Regex estándar robusto (RFC 5322)
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+// --- FUNCIONES ADMIN (ESTAS FALTABAN Y CAUSABAN EL ERROR) ---
+const getAllUsers = async (req, res) => {
+    try {
+        const [users] = await pool.query('SELECT id, name, email, role, phone, is_verified, created_at FROM users');
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Error al obtener usuarios' });
+    }
+};
 
-// Lista negra de dominios temporales comunes (opcional, expandible)
-const BLACKLIST_DOMAINS = ['tempmail.com', '10minutemail.com', 'yopmail.com'];
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM users WHERE id = ?', [id]);
+        res.json({ message: 'Usuario eliminado' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error eliminando usuario' });
+    }
+};
 
+// --- AUTH ---
 const register = async (req, res) => {
     const { name, email, password, phone } = req.body;
 
-    // A. Validar Nombre
-    if (!NAME_REGEX.test(name)) {
-        return res.status(400).json({ message: 'Nombre inválido: Debe tener 2-3 palabras reales, sin repetir (Ej: Juan Perez).' });
-    }
+    if (!name || !email || !password || !phone) return res.status(400).json({ message: 'Campos incompletos.' });
+    if (!NAME_REGEX.test(name)) return res.status(400).json({ message: 'Nombre inválido (reglas estrictas).' });
+    if (!EMAIL_REGEX.test(email)) return res.status(400).json({ message: 'Email inválido.' });
 
-    // B. Validar Email Estricto
-    if (!EMAIL_REGEX.test(email)) return res.status(400).json({ message: 'Formato de correo inválido.' });
-    
-    const domain = email.split('@')[1];
-    if (BLACKLIST_DOMAINS.includes(domain) || !domain.includes('.')) {
-        return res.status(400).json({ message: 'Dominio de correo no permitido o inexistente.' });
-    }
-
-    // C. Validar Teléfono Real
     try {
         const number = phoneUtil.parseAndKeepRawInput(phone);
         if (!phoneUtil.isValidNumber(number)) throw new Error();
-    } catch (e) {
-        return res.status(400).json({ message: 'El número no es válido para el país seleccionado.' });
-    }
+    } catch (e) { return res.status(400).json({ message: 'Número inválido.' }); }
 
-    // D. Validar Contraseña
-    if (password.length < 8) return res.status(400).json({ message: 'Contraseña muy corta.' });
+    const passRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+    if (!passRegex.test(password)) return res.status(400).json({ message: 'Contraseña insegura.' });
 
     try {
-        // Verificar duplicados
-        const [exists] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
-        if (exists.length > 0) return res.status(400).json({ message: 'Este correo ya está registrado.' });
+        const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (existing.length > 0) return res.status(400).json({ message: 'Correo registrado.' });
 
-        // Crear usuario
-        const salt = await bcrypt.genSalt(10);
-        const hash = await bcrypt.hash(password, salt);
-        
-        // Asignar rol (primer usuario es admin)
+        const hash = await bcrypt.hash(password, 10);
         const [total] = await pool.query('SELECT COUNT(*) as c FROM users');
         const role = total[0].c === 0 ? 'admin' : 'client';
 
         await pool.query(
             'INSERT INTO users (name, email, password, phone, role, is_verified) VALUES (?, ?, ?, ?, ?, ?)',
-            [name, email, hash, phone, role, true] // true para pruebas inmediatas
+            [name, email, hash, phone, role, true]
         );
 
-        res.status(201).json({ message: 'Registro exitoso. Inicia sesión.' });
-
+        res.status(201).json({ message: 'Registro exitoso.' });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+        res.status(500).json({ message: 'Error servidor.' });
     }
 };
 
@@ -73,18 +71,27 @@ const login = async (req, res) => {
         if (users.length === 0) return res.status(404).json({ message: 'Usuario no encontrado.' });
 
         const user = users[0];
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return res.status(401).json({ message: 'Contraseña incorrecta.' });
+        if (user.lock_until && new Date() < new Date(user.lock_until)) {
+            return res.status(403).json({ message: 'Cuenta bloqueada temporalmente.' });
+        }
 
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+            const attempts = (user.failed_attempts || 0) + 1;
+            let lock = null;
+            if (attempts >= 5) lock = new Date(Date.now() + 15 * 60000);
+            await pool.query('UPDATE users SET failed_attempts = ?, lock_until = ? WHERE id = ?', [attempts, lock, user.id]);
+            return res.status(401).json({ message: 'Contraseña incorrecta.' });
+        }
+
+        await pool.query('UPDATE users SET failed_attempts = 0, lock_until = NULL WHERE id = ?', [user.id]);
         const token = jwt.sign({ id: user.id, role: user.role, email: user.email }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
 
-        res.json({ 
-            token, 
-            user: { id: user.id, name: user.name, email: user.email, role: user.role } 
-        });
+        res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
     } catch (error) {
-        res.status(500).json({ message: 'Error en login.' });
+        res.status(500).json({ message: 'Error login.' });
     }
 };
 
-module.exports = { register, login };
+// EXPORTAR TODO (ESTO FALTABA PARA QUE NO DE UNDEFINED)
+module.exports = { register, login, getAllUsers, deleteUser };

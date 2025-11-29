@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 async function seedProducts() {
-    console.log('🔧 ACTUALIZANDO ESTRUCTURA DB (Fase 1: Seguridad y Stock)...');
+    console.log('🔧 ACTUALIZANDO ESTRUCTURA DB (Stock Bancario y Seguridad)...');
     
     const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
@@ -15,15 +15,15 @@ async function seedProducts() {
     });
 
     try {
-        // 1. Limpieza (Ordenada para evitar errores de llaves foráneas)
+        // 1. Limpieza segura
         await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
         const tables = ['reservations', 'promotions', 'reviews', 'order_items', 'orders', 'products', 'users'];
         for (const t of tables) await connection.execute(`DROP TABLE IF EXISTS ${t}`);
         await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
 
-        // 2. CREACIÓN DE TABLAS (ACTUALIZADAS)
+        // 2. CREACIÓN DE TABLAS (Lógica Reforzada)
         
-        // Usuarios: Agregamos campos para bloqueo de seguridad y verificación
+        // Usuarios: Con bloqueo de seguridad
         await connection.execute(`
             CREATE TABLE users (
                 id INT AUTO_INCREMENT PRIMARY KEY, 
@@ -39,20 +39,34 @@ async function seedProducts() {
             )
         `);
 
-        // Productos: Agregamos precio base (para descuentos) y galería
+        // Productos: Con precio base para descuentos reales
         await connection.execute(`
             CREATE TABLE products (
                 id INT AUTO_INCREMENT PRIMARY KEY, 
                 name VARCHAR(255), 
                 description TEXT, 
                 base_price DECIMAL(10,2), -- Precio original
-                price DECIMAL(10,2),      -- Precio actual (con descuento)
+                price DECIMAL(10,2),      -- Precio de venta actual
                 stock INT, 
                 category VARCHAR(50), 
                 image_url VARCHAR(500), 
-                gallery JSON,             -- Para múltiples fotos
                 model_url VARCHAR(500), 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // NUEVO: Tabla de Reservas (Para el Carrito Real)
+        await connection.execute(`
+            CREATE TABLE reservations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_id INT,
+                quantity INT,
+                status ENUM('active', 'purchased', 'expired') DEFAULT 'active',
+                expires_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
             )
         `);
 
@@ -66,36 +80,20 @@ async function seedProducts() {
             )
         `);
 
-        // NUEVO: Tabla de Reservas (Para evitar sobreventa en carrito)
-        await connection.execute(`
-            CREATE TABLE reservations (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT,
-                product_id INT,
-                quantity INT,
-                expires_at TIMESTAMP,
-                status ENUM('active', 'expired', 'completed') DEFAULT 'active',
-                FOREIGN KEY (user_id) REFERENCES users(id),
-                FOREIGN KEY (product_id) REFERENCES products(id)
-            )
-        `);
-
-        // Tablas auxiliares (Reviews, Orders...)
-        await connection.execute(`CREATE TABLE reviews (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, product_id INT, rating INT, comment TEXT, approved BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`);
+        // Tablas auxiliares
+        await connection.execute(`CREATE TABLE reviews (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, product_id INT, rating INT, comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`);
         await connection.execute(`CREATE TABLE orders (id INT AUTO_INCREMENT PRIMARY KEY, user_email VARCHAR(255), total DECIMAL(10,2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await connection.execute(`CREATE TABLE order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id INT, product_name VARCHAR(255), quantity INT, price DECIMAL(10,2))`);
 
         // 3. DATOS INICIALES
-        
-        // Admin
         const pass = await bcrypt.hash('admin123', 10);
-        await connection.execute(`INSERT INTO users (name, email, password, phone, role, is_verified) VALUES (?, ?, ?, ?, ?, ?)`, ['The Boss', 'jsusgamep@itc.edu.co', pass, '3222625352', 'admin', true]);
-
-        // Promo Base
+        await connection.execute(`INSERT INTO users (name, email, password, phone, role, is_verified) VALUES (?, ?, ?, ?, ?, ?)`, ['Admin', 'jsusgamep@itc.edu.co', pass, '3222625352', 'admin', true]);
+        
+        // Inicializar Venta Nocturna (Apagada)
         await connection.execute(`INSERT INTO promotions (name, discount_percent, is_active) VALUES ('Venta Nocturna', 0.20, 0)`);
 
         // -----------------------------------------------------------------------
-        // 📝 TU LISTA DE AUTOS (MANTENIDA)
+        // 📝 TUS AUTOS (Mantenidos intactos)
     const misAutos = [
         {
             name: 'Chevrolet Corvette 1957',
