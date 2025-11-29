@@ -408,7 +408,7 @@ window.openModal = function(id) {
     if(!p) return;
     currentProductModalId = id;
     
-    // Calcular precio para el modal
+    // Calcular precio
     let price = parseFloat(p.price);
     let htmlPrice = `<span class="text-danger fw-bold">$${price.toFixed(2)}</span>`;
     
@@ -423,18 +423,41 @@ window.openModal = function(id) {
     document.getElementById('modal-p-name').innerText = p.name;
     document.getElementById('modal-p-desc').innerText = p.description;
     document.getElementById('modal-p-price').innerHTML = htmlPrice;
-    document.getElementById('modal-p-stock').innerText = p.stock > 0 ? `Stock: ${p.stock} unidades` : "Agotado";
+    document.getElementById('modal-p-stock').innerText = p.stock > 0 ? `Stock: ${p.stock}` : "Agotado";
     
-    // Visor 3D o Imagen
+    // --- LÓGICA DE VISUALIZACIÓN 3D MEJORADA ---
     const container = document.getElementById('visual-container');
-    container.innerHTML = (p.model_url && p.model_url.includes('sketchfab')) 
-        ? `<div class="ratio ratio-16x9 border border-secondary shadow"><iframe src="${p.model_url}" frameborder="0" allow="autoplay; fullscreen; vr"></iframe></div>`
-        : `<img src="${p.image_url}" class="img-fluid rounded border border-secondary w-100 shadow">`;
+    
+    if (p.model_url && p.model_url.endsWith('.glb')) {
+        // Opción A: Archivo directo (Google Model Viewer) - ¡ESTO NO FALLA!
+        container.innerHTML = `
+            <div class="ratio ratio-16x9 border border-secondary shadow bg-dark">
+                <model-viewer 
+                    src="${p.model_url}" 
+                    alt="${p.name}" 
+                    auto-rotate 
+                    camera-controls 
+                    ar 
+                    shadow-intensity="1"
+                    style="width: 100%; height: 100%; background-color: #111;"
+                ></model-viewer>
+            </div>
+            <p class="text-center text-muted small mt-2"><i class="fa-solid fa-hand-pointer"></i> Toca y arrastra para rotar 360°</p>
+        `;
+    } else if (p.model_url && p.model_url.includes('sketchfab')) {
+        // Opción B: Iframe antiguo (Fallback)
+        container.innerHTML = `
+            <div class="ratio ratio-16x9 border border-secondary shadow">
+                <iframe src="${p.model_url}" frameborder="0" allow="autoplay; fullscreen; vr"></iframe>
+            </div>`;
+    } else {
+        // Opción C: Imagen estática
+        container.innerHTML = `<img src="${p.image_url}" class="img-fluid rounded border border-secondary w-100 shadow">`;
+    }
         
     loadReviews(id);
     new bootstrap.Modal(document.getElementById('productModal')).show();
 }
-
 // Añadir al carrito (Soporta precio sobreescrito por oferta)
 window.addToCart = function(id, priceOverride) {
     const p = allProducts.find(x => x.id === id);

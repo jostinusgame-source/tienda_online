@@ -3,162 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpeedCollect | Luxury Diecast Dealer</title>
+    <title>SpeedCollect | Coleccionables 1:18</title>
     
+    <!-- Bootstrap & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&family=Russo+One&display=swap" rel="stylesheet">
+    <!-- ✅ VISOR 3D DE GOOGLE (Versión Estable) -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Russo+One&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary-red: #E60000; /* Rojo Ferrari intenso */
-            --dark-bg: #050505;     /* Negro casi puro */
-            --text-main: #FFFFFF;   /* Blanco puro */
-            --text-silver: #E0E0E0; /* Plata brillante para párrafos */
-            --glass: rgba(10, 10, 10, 0.9);
+            --primary-red: #E60000;
+            --dark-bg: #0a0a0a;
+            --text-silver: #d1d1d1;
+            --glass: rgba(15, 15, 15, 0.95);
         }
 
         body {
             background-color: var(--dark-bg);
-            color: var(--text-main);
+            color: #FFFFFF;
             font-family: 'Montserrat', sans-serif;
             overflow-x: hidden;
         }
 
-        /* --- TIPOGRAFÍA DE ALTO IMPACTO --- */
-        h1, h2, h3, h4, .brand-font {
+        h1, h2, h3, .brand-font {
             font-family: 'Russo One', sans-serif;
             text-transform: uppercase;
             letter-spacing: 1.5px;
-            color: #FFF;
-            text-shadow: 0 4px 10px rgba(0,0,0,0.9);
+            color: white;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8);
         }
 
-        p, li, .lead {
-            color: var(--text-silver);
-            line-height: 1.6;
-            font-weight: 400;
-        }
-
-        /* Sobreescribir clases de Bootstrap que son muy oscuras */
-        .text-muted { color: #aaaaaa !important; }
-        .border-secondary { border-color: #333 !important; }
-
-        /* --- NAVBAR & ADMIN --- */
+        /* Navbar */
         .glass-nav {
             background: var(--glass);
-            backdrop-filter: blur(15px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid #333;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
         }
+        .nav-link { color: #aaa !important; font-size: 0.85rem; font-weight: 700; transition: 0.3s; }
+        .nav-link:hover { color: var(--primary-red) !important; }
 
-        .nav-link {
-            color: #fff !important;
-            font-size: 0.9rem;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-        .nav-link:hover { color: var(--primary-red) !important; text-shadow: 0 0 8px var(--primary-red); }
+        /* Admin Crown */
+        .admin-crown-wrapper { display: none; margin-left: 15px; cursor: pointer; animation: float 3s infinite; filter: drop-shadow(0 0 5px red); }
+        @keyframes float { 0%,100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
 
-        /* Corona del Admin */
-        .admin-crown-wrapper {
-            display: none; /* Oculto por defecto */
-            margin-left: 15px;
-            cursor: pointer;
-            animation: floatCrown 3s ease-in-out infinite;
-        }
-        .admin-crown-wrapper i {
-            filter: drop-shadow(0 0 5px #ff0000);
-        }
-        @keyframes floatCrown {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-
-        /* --- SECCIÓN OFERTAS --- */
-        .offer-active-price {
-            color: #00ff41; /* Verde Hacker */
-            font-weight: bold;
-            font-size: 1.4rem;
-            text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
-        }
-        .offer-old-price {
-            text-decoration: line-through;
-            color: #888;
-            font-size: 0.9rem;
-            margin-right: 8px;
-        }
-
-        /* --- CHATBOT WIDGET --- */
-        .chat-trigger {
-            position: fixed; bottom: 100px; right: 30px;
-            width: 60px; height: 60px;
-            background: #111; border: 2px solid var(--primary-red);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer; z-index: 2000;
-            box-shadow: 0 0 20px rgba(230, 0, 0, 0.4);
-            transition: 0.3s;
-        }
-        .chat-trigger:hover { transform: scale(1.1); background: var(--primary-red); }
-
-        .chat-widget {
-            position: fixed; bottom: 100px; right: 30px;
-            width: 320px; height: 400px;
-            background: #111; border: 1px solid #333;
-            border-radius: 12px;
-            display: none; flex-direction: column;
-            z-index: 2001; overflow: hidden;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.8);
-        }
-        .chat-header { background: linear-gradient(90deg, #900, #d00); padding: 15px; font-weight: bold; display: flex; justify-content: space-between; }
-        .chat-body { flex: 1; padding: 15px; overflow-y: auto; background: #0a0a0a; }
-        .chat-footer { padding: 10px; border-top: 1px solid #333; display: flex; gap: 5px; }
-        
-        .msg { padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 0.85rem; max-width: 85%; }
-        .msg-bot { background: #222; border-left: 3px solid var(--primary-red); align-self: flex-start; }
-        .msg-user { background: var(--primary-red); align-self: flex-end; margin-left: auto; }
-
-        /* WhatsApp */
-        .whatsapp-float {
-            position: fixed; bottom: 30px; right: 30px;
-            width: 60px; height: 60px;
-            background-color: #25d366; color: white;
-            border-radius: 50%; text-align: center;
-            font-size: 32px; z-index: 2000;
-            display: flex; align-items: center; justify-content: center;
-            text-decoration: none; box-shadow: 0 0 15px rgba(37, 211, 102, 0.4);
-            transition: 0.3s;
-        }
-        .whatsapp-float:hover { transform: scale(1.1); background: #20b85c; color: white; }
-
-        /* Fondo */
+        /* Fondo de Estrellas */
         .bg-stars {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: url('https://cdn.pixabay.com/photo/2020/02/12/16/09/stars-4843236_1280.png');
-            opacity: 0.15; z-index: -1;
-            animation: moveStars 100s linear infinite;
+            opacity: 0.15; z-index: -1; animation: moveStars 150s linear infinite;
         }
-        @keyframes moveStars { from {background-position: 0 0;} to {background-position: -1000px 1000px;} }
+        @keyframes moveStars { from{background-position: 0 0;} to{background-position: -1000px 1000px;} }
 
+        /* Tarjetas de Producto */
+        .product-card {
+            background: #121212; border: 1px solid #2a2a2a; transition: all 0.3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-5px); border-color: var(--primary-red); box-shadow: 0 10px 30px rgba(230,0,0,0.15);
+        }
+        .overlay-sold {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); color: white; font-weight: bold; font-size: 1.5rem; letter-spacing: 2px;
+            z-index: 10;
+        }
+
+        /* Precios */
+        .offer-price { color: #00ff00; font-weight: bold; text-shadow: 0 0 8px rgba(0,255,0,0.4); }
+        .old-price { text-decoration: line-through; color: #666; font-size: 0.8rem; margin-right: 5px; }
+
+        /* Chatbot & Whatsapp */
+        .chat-widget { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 400px; background: #111; border: 1px solid #333; border-radius: 12px; display: none; flex-direction: column; z-index: 9999; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .chat-trigger { position: fixed; bottom: 100px; right: 30px; width: 60px; height: 60px; background: #111; border: 2px solid var(--primary-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 9998; transition: 0.3s; }
+        .chat-trigger:hover { transform: scale(1.1); background: var(--primary-red); }
+        .whatsapp-float { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background-color: #25d366; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; z-index: 9998; box-shadow: 0 0 20px rgba(37, 211, 102, 0.4); transition: 0.3s; text-decoration: none; }
+        .whatsapp-float:hover { transform: scale(1.1); color: white; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-red); }
     </style>
 </head>
 <body>
 
     <div class="bg-stars"></div>
 
+    <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top navbar-dark glass-nav">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="#">
-                <i class="fa-solid fa-flag-checkered text-danger me-2 fa-lg"></i>
+                <i class="fa-solid fa-car-side text-danger me-2 fa-lg"></i>
                 <span class="brand-font fs-4">Speed<span class="text-danger">Collect</span></span>
             </a>
             
+            <!-- Corona Admin -->
             <div id="admin-crown" class="admin-crown-wrapper" title="Panel Admin">
-                <a href="admin.html" class="text-white"><i class="fa-solid fa-crown fa-xl text-danger"></i></a>
+                <a href="admin.html" class="text-white"><i class="fa-solid fa-crown fa-xl"></i></a>
             </div>
 
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -166,16 +115,16 @@
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto align-items-center gap-4">
+                <ul class="navbar-nav mx-auto align-items-center gap-3">
                     <li class="nav-item"><a class="nav-link" href="#hero">INICIO</a></li>
                     <li class="nav-item"><a class="nav-link" href="#showroom">COLECCIÓN</a></li>
                     <li class="nav-item"><a class="nav-link" href="#offers">OFERTAS</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#contact">CONTACTO</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#reviews">RESEÑAS</a></li>
                 </ul>
                 
                 <div class="d-flex align-items-center gap-3 mt-3 mt-lg-0">
                     <div class="input-group input-group-sm d-none d-lg-flex" style="width: 200px;">
-                        <input type="text" id="search-input" class="form-control bg-transparent border-secondary text-white" placeholder="Buscar modelo...">
+                        <input type="text" id="search-input" class="form-control bg-dark text-white border-secondary" placeholder="Buscar modelo...">
                         <button class="btn btn-outline-light border-secondary"><i class="fa fa-search"></i></button>
                     </div>
 
@@ -192,19 +141,23 @@
         </div>
     </nav>
 
+    <!-- HERO SECTION (Con el Círculo 3D que pediste) -->
     <section id="hero" class="vh-100 d-flex align-items-center position-relative overflow-hidden">
+        <!-- Canvas Three.js de fondo -->
         <div id="canvas-container" class="position-absolute w-100 h-100" style="z-index: 0;"></div>
+        
         <div class="container position-relative z-1">
             <div class="row">
-                <div class="col-lg-7">
+                <div class="col-lg-8">
+                    <div class="badge bg-danger mb-3 px-3 py-2 animate__animated animate__fadeInDown fw-bold">NUEVOS INGRESOS 2025</div>
                     <h1 class="display-1 fw-bold fst-italic animate__animated animate__fadeInLeft">
-                        PRECISIÓN <br><span style="color: var(--primary-red);">ABSOLUTA</span>
+                        EL ARTE DE <br><span style="color: var(--primary-red);">COLECCIONAR</span>
                     </h1>
-                    <p class="fs-4 mt-3 mb-5 animate__animated animate__fadeInLeft animate__delay-1s text-silver">
-                        Modelos a escala 1:18 para coleccionistas exigentes. Ingeniería convertida en arte.
+                    <p class="fs-4 mt-3 mb-5 animate__animated animate__fadeInLeft animate__delay-1s text-silver" style="max-width: 600px;">
+                        Réplicas die-cast escala 1:18. Detalles de motor, interiores de cuero real y pintura original de fábrica.
                     </p>
-                    <div class="animate__animated animate__fadeInUp animate__delay-2s">
-                        <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold shadow-lg me-3">VER GARAJE</a>
+                    <div class="animate__animated animate__fadeInUp animate__delay-2s d-flex gap-3">
+                        <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold shadow-lg">VER GARAJE</a>
                         <a href="#contact" class="btn btn-outline-light btn-lg rounded-0 px-5 fw-bold">UBICACIÓN</a>
                     </div>
                 </div>
@@ -212,15 +165,16 @@
         </div>
     </section>
 
-    <section id="offers" class="py-5 bg-dark border-top border-bottom border-secondary">
+    <!-- OFERTA FLASH -->
+    <section id="offers" class="py-5 bg-black border-top border-bottom border-secondary">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-7">
-                    <h2 class="text-danger fst-italic mb-0"><i class="fa-solid fa-bolt"></i> VENTA FLASH</h2>
-                    <p class="mb-0 mt-2 text-white fs-5">Los precios bajarán un <strong>20%</strong> cuando el contador termine.</p>
+                    <h2 class="text-danger fst-italic mb-0"><i class="fa-solid fa-stopwatch"></i> VENTA FLASH</h2>
+                    <p class="mb-0 mt-2 text-white fs-5">Descuento automático del <strong>20%</strong> al finalizar el contador.</p>
                 </div>
                 <div class="col-md-5 text-center text-md-end mt-4 mt-md-0">
-                    <div class="d-inline-flex gap-2 align-items-center font-monospace fs-1 fw-bold text-white bg-black p-3 rounded border border-danger shadow">
+                    <div class="d-inline-flex gap-2 align-items-center font-monospace fs-1 fw-bold text-white bg-dark p-3 rounded border border-danger shadow">
                         <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
                     </div>
                 </div>
@@ -228,115 +182,144 @@
         </div>
     </section>
 
+    <!-- SHOWROOM (Aquí cargan los productos) -->
     <section id="showroom" class="py-5">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-center mb-5">
-                <h2 class="mb-0">INVENTARIO <span class="text-danger">PREMIUM</span></h2>
-                <div id="category-filters" class="d-none d-md-block">
-                    <button class="btn btn-sm btn-outline-secondary text-white active" data-filter="all">TODOS</button>
-                    <button class="btn btn-sm btn-outline-secondary text-white" data-filter="Autos">AUTOS</button>
-                    <button class="btn btn-sm btn-outline-secondary text-white" data-filter="Raros">EXCLUSIVOS</button>
+            <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+                <h2 class="mb-0">CATÁLOGO <span class="text-danger">EXCLUSIVO</span></h2>
+                <div id="category-filters">
+                    <button class="btn btn-sm btn-outline-secondary text-white active rounded-0 px-3" data-filter="all">TODO</button>
+                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3" data-filter="Autos">AUTOS</button>
+                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3" data-filter="Clásicos">CLÁSICOS</button>
+                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3" data-filter="Raros">ED. LIMITADA</button>
                 </div>
             </div>
             
             <div id="loader" class="text-center py-5">
                 <div class="spinner-border text-danger" role="status"></div>
+                <p class="text-muted mt-2">Abriendo puertas del garaje...</p>
             </div>
             
             <div id="products-container" class="row g-4 d-none"></div>
+            
+            <div class="text-center mt-5">
+                <button class="btn btn-outline-light px-5 rounded-0 fw-bold">CARGAR MÁS (Pág 2)</button>
+            </div>
         </div>
     </section>
 
-    <section id="contact" class="py-5" style="background: #080808;">
+    <!-- RESEÑAS PROFESIONALES -->
+    <section id="reviews" class="py-5 bg-dark border-top border-secondary">
         <div class="container">
-            <div class="row g-0 border border-secondary rounded-4 overflow-hidden shadow-lg">
-                <div class="col-lg-5 bg-black p-5 d-flex flex-column justify-content-center">
-                    <h2 class="mb-4 text-white">CONTACTO <span class="text-danger">VIP</span></h2>
-                    
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="bg-dark p-3 rounded-circle me-3 border border-secondary">
-                            <i class="fa-brands fa-whatsapp fa-2x text-success"></i>
-                        </div>
-                        <div>
-                            <small class="text-muted fw-bold d-block">WHATSAPP DIRECTO</small>
-                            <span class="text-white fs-5 fw-bold">322 262 5352</span>
-                        </div>
-                    </div>
-
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="bg-dark p-3 rounded-circle me-3 border border-secondary">
-                            <i class="fa-regular fa-envelope fa-2x text-danger"></i>
-                        </div>
-                        <div>
-                            <small class="text-muted fw-bold d-block">CORREO CORPORATIVO</small>
-                            <span class="text-white fs-5 fw-bold">jsusgamep@itc.edu.co</span>
-                        </div>
-                    </div>
-
-                    <div class="d-flex align-items-center">
-                        <div class="bg-dark p-3 rounded-circle me-3 border border-secondary">
-                            <i class="fa-solid fa-map-location-dot fa-2x text-primary"></i>
-                        </div>
-                        <div>
-                            <small class="text-muted fw-bold d-block">SHOWROOM BOGOTÁ</small>
-                            <span class="text-white">Calle 93B #13-42, Torre Eko<br>Bogotá D.C., Colombia</span>
-                        </div>
+            <h2 class="text-center mb-5">CLIENTES <span class="text-danger">VIP</span></h2>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card bg-black border-secondary p-4 h-100 text-center shadow">
+                        <div class="mx-auto mb-3 bg-danger rounded-circle d-flex align-items-center justify-content-center" style="width:60px; height:60px; font-weight:bold; font-size:1.5rem;">JP</div>
+                        <h5 class="fw-bold text-white">Juan Pablo Montoya</h5>
+                        <div class="text-warning mb-2 small"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
+                        <p class="text-silver small fst-italic">"Increíble detalle en el Williams FW26. Llegó perfecto a Miami."</p>
                     </div>
                 </div>
-                <div class="col-lg-7 position-relative">
-                    <div id="map" class="h-100 w-100" style="min-height: 450px;"></div>
+                <div class="col-md-4">
+                    <div class="card bg-black border-secondary p-4 h-100 text-center shadow">
+                        <div class="mx-auto mb-3 bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width:60px; height:60px; font-weight:bold; font-size:1.5rem;">AS</div>
+                        <h5 class="fw-bold text-white">Ayrton S. Fan</h5>
+                        <div class="text-warning mb-2 small"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></div>
+                        <p class="text-silver small fst-italic">"La réplica del casco es 1:1 exacta. Una pieza de museo en mi casa."</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-black border-secondary p-4 h-100 text-center shadow">
+                        <div class="mx-auto mb-3 bg-success rounded-circle d-flex align-items-center justify-content-center" style="width:60px; height:60px; font-weight:bold; font-size:1.5rem;">LE</div>
+                        <h5 class="fw-bold text-white">Luis E.</h5>
+                        <div class="text-warning mb-2 small"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
+                        <p class="text-silver small fst-italic">"Buen servicio. El empaque protegió la caja original del die-cast."</p>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- CONTACTO -->
+    <section id="contact" class="py-5 bg-black">
+        <div class="container">
+            <div class="row g-0 border border-secondary rounded-3 overflow-hidden shadow-lg">
+                <div class="col-lg-5 bg-dark p-5">
+                    <h3 class="mb-4 text-white">CONTACTO</h3>
+                    <div class="mb-4">
+                        <small class="text-muted fw-bold d-block">WHATSAPP</small>
+                        <span class="text-white fs-5">322 262 5352</span>
+                    </div>
+                    <div class="mb-4">
+                        <small class="text-muted fw-bold d-block">CORREO ADMIN</small>
+                        <span class="text-white fs-5">jsusgamep@itc.edu.co</span>
+                    </div>
+                    <div>
+                        <small class="text-muted fw-bold d-block">SEDE</small>
+                        <span class="text-white">Av. Carrera 68 #13-42, Bogotá</span>
+                    </div>
+                </div>
+                <div class="col-lg-7 position-relative">
+                    <div id="map" class="h-100 w-100" style="min-height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
     <footer class="bg-black py-4 border-top border-secondary mt-5 text-center">
-        <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Official. Designed for Collectors.</p>
+        <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Inc. Pasión por los detalles.</p>
     </footer>
 
+    <!-- WIDGETS -->
     <div id="chatTrigger" class="chat-trigger"><i class="fa-solid fa-robot fa-xl text-white"></i></div>
     
     <div id="chatWidget" class="chat-widget">
-        <div class="chat-header">
-            <span class="text-white"><i class="fa-solid fa-headset me-2"></i>SpeedBot</span>
+        <div class="chat-header text-white p-3 d-flex justify-content-between" style="background: #D40000;">
+            <span><i class="fa-solid fa-headset me-2"></i>Asistente</span>
             <button id="closeChat" class="btn-close btn-close-white"></button>
         </div>
-        <div id="chatBody" class="chat-body">
-            <div class="msg msg-bot text-white">Bienvenido a SpeedCollect. ¿En qué puedo ayudarte hoy? 🏎️</div>
+        <div id="chatBody" class="p-3 text-white" style="height: 300px; overflow-y: auto; background: #0a0a0a;">
+            <div class="p-2 mb-2 rounded bg-dark border-start border-3 border-danger small">
+                Hola, soy SpeedBot. Pregúntame por precios, envíos o modelos 3D.
+            </div>
         </div>
-        <div class="chat-footer">
-            <input type="text" id="chatInput" class="form-control bg-dark text-white border-secondary" placeholder="Escribe aquí...">
-            <button id="sendChat" class="btn btn-danger"><i class="fa-paper-plane"></i></button>
+        <div class="p-2 border-top border-secondary d-flex gap-2 bg-dark">
+            <input type="text" id="chatInput" class="form-control bg-black text-white border-secondary form-control-sm" placeholder="Escribe...">
+            <button id="sendChat" class="btn btn-danger btn-sm"><i class="fa-paper-plane"></i></button>
         </div>
     </div>
 
-    <a href="https://wa.me/573222625352" class="whatsapp-float" target="_blank">
-        <i class="fa-brands fa-whatsapp"></i>
-    </a>
+    <a href="https://wa.me/573222625352" class="whatsapp-float" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
 
+    <!-- MODAL PRODUCTO (CON MODEL-VIEWER) -->
     <div class="modal fade" id="productModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content bg-black text-white border-secondary shadow-lg">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold text-uppercase text-danger" id="modal-p-name">Nombre</h5>
+                    <h5 class="modal-title fw-bold text-uppercase text-danger" id="modal-p-name">Modelo</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-lg-8 mb-3" id="visual-container"></div>
+                        <!-- AQUÍ SE INYECTA EL MODELO 3D -->
+                        <div class="col-lg-8 mb-3" id="visual-container" style="min-height: 400px; background: #111;"></div>
+                        
                         <div class="col-lg-4">
-                            <div id="price-display-container">
+                            <div id="price-display-container" class="mb-3">
                                 <h2 class="text-danger fw-bold" id="modal-p-price">$0.00</h2>
                             </div>
-                            
                             <p class="text-warning small mb-3" id="modal-p-stock">Stock: 0</p>
-                            <p class="text-silver" id="modal-p-desc">Descripción...</p>
+                            <p class="text-silver" id="modal-p-desc">Detalles...</p>
+                            
                             <hr class="border-secondary">
-                            <div id="reviewsContainer" class="mb-3 custom-scrollbar" style="max-height: 200px; overflow-y: auto;"></div>
+                            <h6 class="text-uppercase small fw-bold text-muted">Añadir Reseña</h6>
                             <form id="reviewForm">
-                                <textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Escribe tu reseña..."></textarea>
+                                <textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Tu opinión..."></textarea>
                                 <button type="submit" class="btn btn-outline-danger btn-sm w-100">Publicar</button>
                             </form>
+                            <div id="reviewsContainer" class="mt-3 custom-scrollbar" style="max-height: 150px; overflow-y: auto;"></div>
                         </div>
                     </div>
                 </div>
@@ -344,11 +327,12 @@
         </div>
     </div>
 
+    <!-- MODAL PAGO -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border-secondary">
                 <div class="modal-header border-secondary">
-                    <h5 class="modal-title fw-bold">TU GARAJE</h5>
+                    <h5 class="modal-title fw-bold">TU COLECCIÓN</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -358,12 +342,13 @@
                     </div>
                 </div>
                 <div class="modal-footer border-secondary">
-                    <button type="button" class="btn btn-success fw-bold w-100" onclick="checkout()">PAGAR AHORA</button>
+                    <button type="button" class="btn btn-success fw-bold w-100" onclick="checkout()">PAGAR</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -371,31 +356,28 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="script.js"></script>
 
+    <!-- INITS VISUALES -->
     <script>
-        // MAPA BOGOTÁ ZONA 93
-        const map = L.map('map', {scrollWheelZoom: false}).setView([4.678, -74.056], 15);
+        // MAPA
+        const map = L.map('map', {scrollWheelZoom: false}).setView([4.65, -74.1], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        const icon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [35, 35] });
-        L.marker([4.678, -74.056], {icon: icon}).addTo(map).bindPopup('<b style="color:#000">SpeedCollect HQ</b>').openPopup();
+        L.marker([4.65, -74.1]).addTo(map).bindPopup('<b>SpeedCollect HQ</b>').openPopup();
 
-        // 3D HERO (THREE.JS) - Cubo tech rojo
+        // 3D HERO (CÍRCULO)
         const scn = new THREE.Scene();
         const cam = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         const rdr = new THREE.WebGLRenderer({alpha:true, antialias:true});
         rdr.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('canvas-container').appendChild(rdr.domElement);
         
-        const geo = new THREE.IcosahedronGeometry(10, 1);
-        const mat = new THREE.MeshPhongMaterial({color: 0xD40000, wireframe: true, emissive: 0x500000});
+        const geo = new THREE.TorusGeometry(10, 3, 16, 100);
+        const mat = new THREE.MeshBasicMaterial({color: 0x990000, wireframe: true});
         const obj = new THREE.Mesh(geo, mat);
         scn.add(obj);
         
-        const l1 = new THREE.DirectionalLight(0xffffff, 1); l1.position.set(1,1,2); scn.add(l1);
-        cam.position.z = 25;
-        
-        function anim3D(){ requestAnimationFrame(anim3D); obj.rotation.x+=0.002; obj.rotation.y+=0.004; rdr.render(scn, cam); }
-        anim3D();
-        
+        cam.position.z = 30;
+        function anim(){ requestAnimationFrame(anim); obj.rotation.x+=0.01; obj.rotation.y+=0.005; rdr.render(scn, cam); }
+        anim();
         window.addEventListener('resize', ()=>{ cam.aspect=window.innerWidth/window.innerHeight; cam.updateProjectionMatrix(); rdr.setSize(window.innerWidth, window.innerHeight); });
     </script>
 </body>
