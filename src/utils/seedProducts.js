@@ -31,7 +31,7 @@ async function seedProducts() {
         {
             name: 'Chevrolet Corvette 1957',
             description: 'El Oldsmobile Starfire 98 Convertible del 57 destaca por su elegancia clásica con líneas cromadas brillantes, capota convertible para una experiencia vintage inolvidable, un motor V8 potente, interior de cuero amplio y lujoso, y un nivel de exclusividad que lo convierte en una pieza de colección altamente deseada.',
-            price: 200.000,
+            price: 200000,
             stock: 5,
             category: 'Clásicos',
             image_url: 'https://cdnb.artstation.com/p/assets/images/images/001/233/693/large/barba-rossa-olds-01.jpg?1442686432', // Foto portada
@@ -45,7 +45,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Clásico',
     image_url: 'https://images.squarespace-cdn.com/content/v1/596649e917bffcd672d15ea4/1535739636945-7ELGQ7LRAJHRKK529BWH/L1002595.jpg?format=1000w',
-    model_url: '/autos/1.glb'
+    model_url: ''
 }
 ,
 {
@@ -55,7 +55,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Clásico',
     image_url: 'https://media.sketchfab.com/models/78f76d386a4341b0b71745bdc50fd5ab/thumbnails/3d7b0e16e2934a258e9176bb881c1c52/936931a8aeb44021a025fc57202ed0d1.jpeg',
-    model_url: ''
+    model_url: '/autos/1.glb'
 }
 ,
 {
@@ -105,7 +105,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Superdeportivo',
     image_url: 'https://media.sketchfab.com/models/dd6c3effdb1e43ecadace447ccbda68d/thumbnails/74573a8767ba43078c12ee732647ce81/3ecb6f0f9734480293fcef956bf802f4.jpeg',
-    model_url: '/autos/7.glb'
+    model_url: '/autos/6.glb'
 }
 ,
 {
@@ -115,7 +115,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Híbrido Deportivo',
     image_url: 'https://i.ytimg.com/vi/spWEUdiqIJE/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLB3GWUc5Ffahg2AGyblbzV-jMjoTg',
-    model_url: '/autos/8.glb'
+    model_url: '/autos/7.glb'
 }
 ,
 {
@@ -125,7 +125,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Deportivo',
     image_url: 'https://fotos.perfil.com/2019/08/30/trim/876/492/corvette-770541.jpg',
-    model_url: '/autos/9.glb'
+    model_url: '/autos/8.glb'
 }
 ,
 {
@@ -135,7 +135,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Fórmula 1',
     image_url: 'https://cdn-8.motorsport.com/images/amp/0k7zJ1A0/s1000/aston-martin-23-1.jpg',
-    model_url: '/autos/10.glb'
+    model_url: '/autos/9.glb'
 }
 ,
 {
@@ -145,7 +145,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Fórmula 1',
     image_url: 'https://media.sketchfab.com/models/e4afe46f3aab4b23a418da06fc163821/thumbnails/bc90275decbb4148a04facb0039f3c60/e7a6a81994c44777a50e14920a687e33.jpeg',
-    model_url: '/autos/11.glb'
+    model_url: '/autos/10.glb'
 }
 ,
 {
@@ -155,7 +155,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Fórmula 1',
     image_url: 'https://acnews.blob.core.windows.net/imgnews/large/NAZ_2f922f2a2f024e499aeb4be487a8889c.webp',
-    model_url: '/autos/12.glb'
+    model_url: '/autos/11.glb'
 }
 ,
 {
@@ -165,7 +165,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Superdeportivo',
     image_url: 'https://puromotor.com/wp-content/uploads/2022/08/2023-porsche-911-gt3-rs-puromotor.jpg',
-    model_url: ''
+    model_url: '/autos/12.glb'
 }
 ,
 {
@@ -185,7 +185,7 @@ async function seedProducts() {
     stock: 10,
     category: 'Deportivo de Competición',
     image_url: 'https://d63oxfkn1m8sf.cloudfront.net/3000x1876/7017/3982/6098/c4503_1.jpg%3Ffit%3D1',
-    model_url: '/autos/15.glb'
+    model_url: '/autos/14.glb'
 }
 
     ];
