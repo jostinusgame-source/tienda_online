@@ -10,10 +10,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <!-- Librería Teléfono (Para evitar errores en script.js) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
     
-    <!-- ✅ VISOR 3D GOOGLE (Indispensable) -->
+    <!-- ✅ VISOR 3D GOOGLE -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
     
     <!-- TIPOGRAFÍA PREMIUM -->
@@ -144,12 +143,18 @@
             box-shadow: 0 15px 40px rgba(230, 0, 0, 0.15);
         }
         
-        .admin-crown-wrapper { 
-            display: none; 
+        /* CORONA FLOTANTE (Movida de posición) */
+        .admin-crown-floating { 
+            display: none; /* Se activa con JS */
+            position: fixed;
+            bottom: 170px; /* Encima del bot */
+            right: 38px;
             cursor: pointer; 
             animation: float 3s infinite; 
             filter: drop-shadow(0 0 8px red); 
-            margin-left: 15px; 
+            z-index: 10000;
+            font-size: 2rem;
+            color: #FFD700; /* Dorado */
         }
         @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
 
@@ -171,10 +176,9 @@
     <nav class="navbar navbar-expand-lg fixed-top navbar-dark glass-nav">
         <div class="container-fluid px-lg-5">
             
-            <!-- LOGO SVG PROPIO -->
+            <!-- LOGO -->
             <a class="navbar-brand d-flex align-items-center gap-2" href="#">
                 <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- S Estilizada como Circuito -->
                     <path d="M20 30 H 70 A 10 10 0 0 1 80 40 V 60 A 10 10 0 0 1 70 70 H 30 A 10 10 0 0 0 20 80" stroke="#D40000" stroke-width="8" stroke-linecap="round"/>
                     <path d="M85 20 L 60 45" stroke="white" stroke-width="3"/>
                     <circle cx="50" cy="50" r="42" stroke="white" stroke-width="2" stroke-dasharray="5 5" opacity="0.3"/>
@@ -185,11 +189,6 @@
                 </div>
             </a>
             
-            <!-- CORONA ADMIN -->
-            <div id="admin-crown" class="admin-crown-wrapper" title="Panel de Control">
-                <a href="admin.html" class="text-white"><i class="fa-solid fa-crown fa-xl"></i></a>
-            </div>
-
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -210,7 +209,7 @@
                         <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger border border-black" style="display:none; padding:4px 6px; font-size:0.6rem;">0</span>
                     </a>
 
-                    <!-- BOTÓN LOGIN NUEVO -->
+                    <!-- BOTÓN LOGIN -->
                     <div id="auth-section">
                         <a href="login.html" class="btn-login-glow">
                             <i class="fa-solid fa-right-to-bracket me-2"></i> Acceder
@@ -223,9 +222,7 @@
 
     <!-- HERO 3D -->
     <section id="hero" class="vh-100 d-flex align-items-center position-relative overflow-hidden">
-        <!-- Fondo 3D -->
         <div id="canvas-container" class="position-absolute w-100 h-100" style="z-index: 0;"></div>
-        
         <div class="container position-relative z-1">
             <div class="row">
                 <div class="col-lg-8">
@@ -245,7 +242,6 @@
                 </div>
             </div>
         </div>
-        <!-- Flecha Scroll -->
         <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 text-white opacity-50 animate__animated animate__bounce animate__infinite">
             <i class="fa-solid fa-chevron-down fa-lg"></i>
         </div>
@@ -268,7 +264,7 @@
         </div>
     </section>
 
-    <!-- SHOWROOM (CON BARRA DE PRECIO) -->
+    <!-- SHOWROOM (CORREGIDO PRECIO) -->
     <section id="showroom" class="py-5">
         <div class="container">
             <div class="row mb-5 align-items-center g-3">
@@ -276,7 +272,6 @@
                     <h2 class="mb-0 text-white border-start border-5 border-danger ps-3">CATÁLOGO</h2>
                 </div>
                 
-                <!-- Buscador Texto -->
                 <div class="col-lg-3">
                     <div class="input-group bg-dark rounded-1 overflow-hidden border border-secondary">
                         <span class="input-group-text bg-transparent border-0 text-secondary"><i class="fa fa-search"></i></span>
@@ -284,22 +279,21 @@
                     </div>
                 </div>
 
-                <!-- FILTRO PRECIO (SLIDER) -->
+                <!-- FILTRO PRECIO CORREGIDO A 1 MILLÓN -->
                 <div class="col-lg-3">
                     <div class="price-slider-wrapper">
                         <div class="d-flex justify-content-between w-100 mb-1">
-                            <label class="text-muted small fw-bold"><i class="fa-solid fa-filter text-danger"></i> PRECIO MAX</label>
-                            <span id="price-val" class="text-white fw-bold small">$1000</span>
+                            <label class="text-muted small fw-bold"><i class="fa-solid fa-filter text-danger"></i> MAX:</label>
+                            <span id="price-val" class="text-white fw-bold small">$1,000,000</span>
                         </div>
-                        <input type="range" id="price-range" class="form-range" min="0" max="1000" step="50" value="1000">
+                        <input type="range" id="price-range" class="form-range" min="0" max="1000000" step="10000" value="1000000">
                     </div>
                 </div>
 
-                <!-- Filtros Categoría -->
                 <div class="col-lg-3 text-lg-end" id="category-filters">
                     <button class="btn btn-sm btn-outline-secondary text-white active rounded-0 px-3 fw-bold" data-filter="all">TODO</button>
                     <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3 fw-bold" data-filter="Autos">AUTOS</button>
-                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3 fw-bold" data-filter="Raros">ED. LIMITADA</button>
+                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3 fw-bold" data-filter="Clásico">CLÁSICOS</button>
                 </div>
             </div>
             
@@ -311,22 +305,22 @@
             <div id="products-container" class="row g-4 d-none"></div>
             
             <div class="text-center mt-5">
-                <button class="btn btn-outline-light px-5 py-2 rounded-0 fw-bold hover-scale" style="letter-spacing: 2px;">CARGAR MÁS</button>
+                <!-- El botón se crea dinámicamente -->
             </div>
         </div>
     </section>
 
-    <!-- RESEÑAS -->
+    <!-- RESEÑAS VIP (MEJORADAS PARA LEERSE BIEN) -->
     <section id="reviews" class="py-5" style="background: #080808;">
         <div class="container">
-            <h2 class="text-center mb-5">CLIENTES <span class="text-danger">VIP</span></h2>
+            <h2 class="text-center mb-5">VOCES DEL <span class="text-danger">PADDOCK</span></h2>
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="custom-card p-4 h-100 text-center">
                         <img src="https://randomuser.me/api/portraits/men/32.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
                         <h5 class="fw-bold text-white">Juan Pablo Montoya</h5>
                         <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-                        <p class="text-secondary small fst-italic">"El nivel de detalle en el motor es absurdo. SpeedCollect es otro nivel."</p>
+                        <p class="text-silver small fst-italic">"El nivel de detalle en el motor es absurdo. SpeedCollect es otro nivel."</p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -334,7 +328,7 @@
                         <img src="https://randomuser.me/api/portraits/women/44.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
                         <h5 class="fw-bold text-white">Tatiana Calderón</h5>
                         <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-                        <p class="text-secondary small fst-italic">"El envío fue perfecto. El empaque protegió la caja original del Ferrari."</p>
+                        <p class="text-silver small fst-italic">"El envío fue perfecto. El empaque protegió la caja original del Ferrari."</p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -342,7 +336,7 @@
                         <img src="https://randomuser.me/api/portraits/men/85.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
                         <h5 class="fw-bold text-white">Carlos Sainz</h5>
                         <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-                        <p class="text-secondary small fst-italic">"La mejor tienda de die-cast en Colombia. 100% recomendados."</p>
+                        <p class="text-silver small fst-italic">"La mejor tienda de die-cast en Colombia. 100% recomendados."</p>
                     </div>
                 </div>
             </div>
@@ -377,10 +371,16 @@
 
     <!-- FOOTER -->
     <footer class="bg-black py-4 border-top border-secondary mt-5 text-center">
-        <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Inc. Pasión por la velocidad.</p>
+        <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Inc.</p>
     </footer>
 
-    <!-- WIDGETS -->
+    <!-- WIDGETS Y CORONA FLOTANTE -->
+    
+    <!-- CORONA ADMIN FLOTANTE ENCIMA DEL BOT (NUEVA UBICACIÓN) -->
+    <div id="admin-crown" class="admin-crown-floating" title="Panel de Control">
+        <a href="admin.html" class="text-warning"><i class="fa-solid fa-crown"></i></a>
+    </div>
+
     <div id="chatTrigger" class="chat-trigger"><i class="fa-solid fa-robot fa-xl text-white"></i></div>
     <div id="chatWidget" class="chat-widget">
         <div class="p-3 text-white d-flex justify-content-between align-items-center" style="background:#D40000;">
@@ -396,7 +396,7 @@
     </div>
     <a href="https://wa.me/573222625352" class="whatsapp-float" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
 
-    <!-- MODALES -->
+    <!-- MODAL PRODUCTO -->
     <div class="modal fade" id="productModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content bg-black text-white border-secondary shadow-lg">

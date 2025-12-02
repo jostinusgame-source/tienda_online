@@ -1,9 +1,10 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO
+ * SPEEDCOLLECT | SCRIPT MAESTRO (CORREGIDO)
  * Fase 1: Stock Real, Paginación y Validaciones Bancarias
  */
 
 const API_URL = '/api'; 
+let allProducts = []; // Memoria global de productos cargados
 let currentProductModalId = null;
 let itiInstance = null; 
 let isOfferActive = false;
@@ -66,40 +67,42 @@ function setupStoreListeners() {
     });
 
     // Buscador (Debounce para no saturar)
-    const searchInput = document.getElementById('search-input');
+    const sInput = document.getElementById('search-input');
     let timeout = null;
-    if(searchInput) {
-        searchInput.addEventListener('input', () => {
+    if(sInput) {
+        sInput.addEventListener('input', () => {
             clearTimeout(timeout);
             timeout = setTimeout(() => loadCatalog(true), 500);
         });
     }
 
     // Filtro Precio
-    const priceRange = document.getElementById('price-range');
-    const priceVal = document.getElementById('price-val');
-    if(priceRange) {
-        priceRange.addEventListener('input', (e) => {
-            if(priceVal) priceVal.innerText = `$${e.target.value}`;
+    const pRange = document.getElementById('price-range');
+    const pVal = document.getElementById('price-val');
+    if(pRange) {
+        pRange.addEventListener('input', (e) => {
+            if(pVal) pVal.innerText = `$${parseInt(e.target.value).toLocaleString()}`;
         });
-        priceRange.addEventListener('change', () => loadCatalog(true)); // Cargar al soltar
+        pRange.addEventListener('change', () => loadCatalog(true)); // Cargar al soltar
     }
 
-    // Botón Cargar Más
-    const loadMoreBtn = document.createElement('button');
-    loadMoreBtn.id = 'load-more-btn';
-    loadMoreBtn.className = 'btn btn-outline-light px-5 py-2 rounded-0 fw-bold mt-4 d-none';
-    loadMoreBtn.innerText = 'CARGAR MÁS MODELOS';
-    loadMoreBtn.onclick = () => {
-        currentPage++;
-        loadCatalog(false); // No resetear, añadir al final
-    };
-    // Insertar botón después del container
-    const container = document.getElementById('products-container');
-    container.parentNode.appendChild(loadMoreBtn); // Agregar al final de la sección
+    // Botón Cargar Más (Creación dinámica)
+    if(!document.getElementById('load-more-btn')) {
+        const moreBtn = document.createElement('button');
+        moreBtn.id = 'load-more-btn';
+        moreBtn.className = 'btn btn-outline-light d-block mx-auto mt-4 mb-5';
+        moreBtn.innerText = 'CARGAR MÁS MODELOS';
+        moreBtn.style.display = 'none';
+        moreBtn.onclick = () => {
+            currentPage++;
+            loadCatalog(false); // No resetear, añadir al final
+        };
+        const container = document.getElementById('products-container');
+        container.parentNode.appendChild(moreBtn);
+    }
 }
 
-// FUNCIÓN MAESTRA DE CARGA
+// FUNCIÓN MAESTRA DE CARGA (CORREGIDA)
 async function loadCatalog(reset = false) {
     const container = document.getElementById('products-container');
     const loader = document.getElementById('loader');
@@ -108,6 +111,7 @@ async function loadCatalog(reset = false) {
     if (reset) {
         currentPage = 0;
         container.innerHTML = '';
+        allProducts = []; // Limpiar memoria para nueva búsqueda
     }
 
     if(loader) loader.style.display = 'block';
@@ -133,26 +137,40 @@ async function loadCatalog(reset = false) {
         }
 
         const res = await fetch(url);
-        const products = await res.json();
+        
+        if (!res.ok) throw new Error("Error en servidor");
+        
+        const newProducts = await res.json();
 
         if(loader) loader.style.display = 'none';
 
-        if (products.length === 0 && currentPage === 0) {
+        if (newProducts.length === 0 && currentPage === 0) {
             container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
             if(loadMoreBtn) loadMoreBtn.style.display = 'none';
             return;
         }
 
-        renderProducts(products);
+        // IMPORTANTE: Guardar en memoria global para que los modales funcionen
+        // Si es reset, reemplazamos. Si es cargar más, añadimos.
+        if (reset) {
+            allProducts = newProducts;
+        } else {
+            allProducts = [...allProducts, ...newProducts];
+        }
+
+        renderProducts(newProducts);
 
         // Controlar botón "Cargar Más"
         if (loadMoreBtn) {
-            loadMoreBtn.style.display = products.length < ITEMS_PER_PAGE ? 'none' : 'inline-block';
+            loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
         }
 
     } catch (e) {
         console.error(e);
-        if(loader) loader.innerHTML = '<p class="text-danger">Error de conexión.</p>';
+        if(loader) {
+            loader.style.display = 'none';
+            container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
+        }
     }
 }
 
@@ -167,7 +185,7 @@ function renderProducts(products) {
         let price = parseFloat(p.price);
         let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
 
-        if (p.discount_applied) { // Viene del backend si hay venta nocturna
+        if (p.discount) { // Viene del backend si hay venta nocturna activa
             priceHtml = `
                 <div class="d-flex flex-column align-items-start">
                     <span class="old-price small">$${parseFloat(p.base_price).toLocaleString()}</span>
@@ -179,9 +197,9 @@ function renderProducts(products) {
         <div class="col-md-6 col-lg-4 mb-4 animate__animated animate__fadeIn">
             <div class="card custom-card h-100 shadow product-card" onclick="openModal(${p.id})">
                 <div class="position-relative overflow-hidden" style="height: 250px;">
-                    <img src="${img}" class="card-img-top w-100 h-100 object-fit-cover" alt="${p.name}">
+                    <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
                     <div class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">${p.category}</div>
-                    ${p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-light"><i class="fa-solid fa-cube"></i> 3D</div>' : ''}
+                    ${p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-white"><i class="fa-solid fa-cube"></i> 3D</div>' : ''}
                     ${isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : ''}
                 </div>
                 <div class="card-body d-flex flex-column bg-black text-white">
@@ -203,277 +221,131 @@ function renderProducts(products) {
     container.insertAdjacentHTML('beforeend', html);
 }
 
-// ==========================================
-// 3. CARRITO Y STOCK (LÓGICA SEGURA)
-// ==========================================
-
-// ACTUALIZAR CONTADOR (Backend)
-async function updateCartUI() {
-    const token = localStorage.getItem('token');
-    const el = document.getElementById('cart-count');
-    if (!el || !token) return;
-
-    try {
-        const res = await fetch(`${API_URL}/store/cart`, { headers: { 'Authorization': `Bearer ${token}` } });
-        if (res.ok) {
-            const data = await res.json();
-            const count = data.items.reduce((acc, item) => acc + item.quantity, 0);
-            el.innerText = count;
-            el.style.display = count > 0 ? 'block' : 'none';
-        }
-    } catch(e) {}
-}
-
-// AÑADIR A CARRITO (RESERVAR)
+// ==========================
+// 2. CARRITO Y COMPRA (STOCK REAL)
+// ==========================
 window.addToCart = async function(id) {
     const token = localStorage.getItem('token');
     
-    // 1. Validación de Sesión
+    // VALIDACIÓN 1: Usuario no verificado/logueado
     if (!token) {
-        if(confirm("🔒 Acceso Restringido. Debes iniciar sesión para reservar. ¿Ir al login?")) {
-            window.location.href = 'login.html';
+        if(confirm("🔒 Acceso Restringido.\nDebes registrarte o iniciar sesión para comprar.\n¿Ir al registro ahora?")) {
+            window.location.href = 'register.html';
         }
         return;
     }
 
+    // VALIDACIÓN 2: Stock (Consulta al backend)
     try {
-        // 2. Petición al Backend (Valida stock y crea reserva)
         const res = await fetch(`${API_URL}/store/cart`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ productId: id, quantity: 1 })
         });
-
         const data = await res.json();
 
         if (res.ok) {
             alert(`✅ ${data.message}`);
-            updateCartUI(); 
+            updateCartUI(); // Actualizar contador visual
         } else {
-            // 3. Manejo de Errores (Stock, Límite, etc)
-            alert(`⚠️ ${data.message}`);
+            alert(`⚠️ ${data.message}`); // Mensaje real de stock del backend
         }
-    } catch (e) {
-        alert("Error de conexión con el servidor.");
-    }
+    } catch (e) { alert("Error de conexión"); }
 };
 
-// ABRIR MODAL PAGO
 window.openPaymentModal = async function() {
     const token = localStorage.getItem('token');
-    if (!token) return new bootstrap.Modal(document.getElementById('loginRequiredModal')).show();
+    if(!token) return alert("Inicia sesión");
     
     try {
-        const res = await fetch(`${API_URL}/store/cart`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
+        const res = await fetch(`${API_URL}/store/cart`, { headers: {'Authorization':`Bearer ${token}`} });
         const data = await res.json();
-        const list = document.getElementById('cart-items');
         
-        // Guardar para PDF
-        window.currentCartItems = data.items;
-        window.currentCartTotal = data.total;
-
-        if (data.items.length === 0) {
-            list.innerHTML = '<p class="text-center text-muted py-4">Tu garaje está vacío.</p>';
+        window.currentCartItems = data.items; // Guardar para PDF
+        const list = document.getElementById('cart-items');
+        const totalEl = document.getElementById('cart-total');
+        
+        if(data.items.length === 0) {
+            list.innerHTML = '<p class="text-center text-muted">Garaje vacío.</p>';
         } else {
-            list.innerHTML = data.items.map(item => `
-            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
-                <div>
-                    <span class="fw-bold text-white me-2">${item.quantity}x</span> 
-                    <span class="text-light">${item.name}</span>
-                </div>
-                <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
-            </div>`).join('');
+            list.innerHTML = data.items.map(i => `
+                <div class="d-flex justify-content-between align-items-center mb-2 border-bottom border-secondary pb-1">
+                    <div><span class="fw-bold">${i.quantity}x</span> ${i.name}</div>
+                    <span class="text-success fw-bold">$${(i.price*i.quantity).toLocaleString()}</span>
+                </div>`).join('');
         }
         
-        document.getElementById('cart-total').innerText = `$${parseFloat(data.total).toFixed(2)}`;
+        if(totalEl) totalEl.innerText = `$${parseFloat(data.total).toLocaleString()}`;
         new bootstrap.Modal(document.getElementById('paymentModal')).show();
-
-    } catch (e) {
-        alert("No se pudo cargar el carrito.");
-    }
+    } catch(e) { alert("Error cargando carrito"); }
 };
 
-// CHECKOUT (PDF + DB)
 window.checkout = async function() {
     const token = localStorage.getItem('token');
-    if (!token) return;
-
-    if (!confirm("¿Confirmar compra y procesar factura?")) return;
+    if(!token) return;
+    if(!confirm("¿Confirmar compra y debitar de tu cuenta?")) return;
 
     try {
-        const res = await fetch(`${API_URL}/store/checkout`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            // Generar PDF
-            generatePDF(window.currentCartItems, data.total, data.orderId);
-            
-            alert("¡COMPRA EXITOSA! Revisa tu carpeta de descargas.");
+        const res = await fetch(`${API_URL}/store/checkout`, { method:'POST', headers:{'Authorization':`Bearer ${token}`} });
+        const d = await res.json();
+        
+        if(res.ok) {
+            generatePDF(window.currentCartItems, d.total, d.orderId);
+            alert("¡COMPRA EXITOSA!");
             updateCartUI();
             bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-            
-            // Recargar catálogo para actualizar stocks visualmente
-            loadCatalog(true);
-        } else {
-            alert(`❌ Error: ${data.message}`);
-        }
-    } catch (e) {
-        alert("Error procesando pago.");
-    }
+            loadCatalog(true); // Actualizar stock visual en catálogo
+        } else alert("Error: " + d.message);
+    } catch(e) { alert("Error en pago"); }
 };
 
-// ==========================================
-// 4. MODAL DETALLE (3D & IMAGEN)
-// ==========================================
-window.openModal = async function(id) {
-    // Buscar producto en la página actual (o hacer fetch específico si prefieres)
-    // Para simplificar, hacemos fetch para tener datos frescos (como stock)
-    try {
-        // Nota: Idealmente crearías un endpoint /store/products/:id, pero usaremos lógica frontend por ahora
-        // Si tienes el array allProducts, búscalo ahí, pero el stock podría estar viejo.
-        // Simularemos con los datos actuales de la vista.
-        
-        // Solución robusta: Volver a pedir datos de 1 producto (Opcional, si tienes el endpoint)
-        // Por ahora usamos los datos cargados en memoria que vienen de loadCatalog
-        
-        // Buscar el elemento en el DOM para sacar la info visual si no está en memoria
-        // ... (Para simplificar, asumiremos que está en allProducts del catálogo) ...
-        
-        // Mejor enfoque: Hacer que loadCatalog guarde en window.currentProducts
-        // (Agregué `allProducts = [...allProducts, ...newProducts]` en loadCatalog arriba, pero
-        // para asegurar integridad, usaremos fetch si es necesario o el array global).
-        
-        // Como 'allProducts' se llena en loadCatalog (linea ~100 de loadCatalog en mi mente), lo usamos.
-        // Pero espera, en loadCatalog no guardé en variable global en este script.
-        // CORRECCIÓN: Vamos a guardar los productos cargados en una variable global.
-        
-        // (Nota: En la función loadCatalog que te di arriba, no guardé en global array. 
-        //  Voy a asumir que el usuario hace click en lo que ve).
-        
-        // Truco: Leer del array global (que definí al inicio `let allProducts = []` pero no llené en loadCatalog).
-        // Voy a arreglar loadCatalog ahora mismo en este script final.
-    } catch(e){}
-    
-    // --- IMPORTANTE: Recuperar producto del array global (que llenaremos abajo)
-    // Ver corrección en loadCatalog
-};
-
-// RE-IMPLEMENTACIÓN OPENMODAL CON DATOS
-// Nota: Necesitamos que loadCatalog llene `window.catalogProducts`.
-window.catalogProducts = []; // Array global temporal
-
-// SOBREESCRIBIR loadCatalog para llenar el array (Mejora técnica)
-// (Ya incluido arriba, pero asegúrate de que loadCatalog haga: window.catalogProducts = ... o similar)
-// En el código de arriba, loadCatalog renderiza directo. Vamos a ajustarlo para guardar datos.
-
-// ********* CORRECCIÓN EN loadCatalog (Línea ~95) **********
-// En loadCatalog, donde dice "const newProducts = ...", agrega:
-// if(reset) window.catalogProducts = [];
-// window.catalogProducts = [...window.catalogProducts, ...newProducts];
-// **********************************************************
-
-// Funcion OpenModal Real
-window.openModal = function(id) {
-    // Buscar en los productos cargados
-    // Nota: Como no tengo el código de loadCatalog con la variable global en el bloque anterior,
-    // voy a hacer un fetch rápido para asegurar datos frescos. Es más seguro.
-    
-    // FETCH INDIVIDUAL (Mejor práctica para stock real)
-    // Pero como no tienes el endpoint individual implementado en el controller que te di,
-    // usaremos el truco de buscar en la variable global.
-    
-    // ASUMO que agregaste la línea en loadCatalog. Si no, esto fallará.
-    // Para evitar fallos, aquí va la lógica segura:
-    
-    // Intentar buscar en el DOM o memoria
-    // ...
-    // OK, para no complicarte: Voy a modificar loadCatalog en este script para que guarde los datos.
-    
-    // (Ver abajo función loadCatalog corregida dentro de este mismo script)
-    
-    const p = window.catalogProducts ? window.catalogProducts.find(x => x.id === id) : null;
-    if (!p) return;
-    
-    currentProductModalId = id;
-    
-    let htmlPrice = `<span class="text-danger fw-bold fs-2">$${parseFloat(p.price).toLocaleString()}</span>`;
-    
-    // Datos Texto
-    document.getElementById('modal-p-name').innerText = p.name;
-    document.getElementById('modal-p-desc').innerText = p.description;
-    document.getElementById('modal-p-price').innerHTML = htmlPrice;
-    document.getElementById('modal-p-stock').innerHTML = p.stock > 0 ? `<span class="text-success">Disponible: ${p.stock}</span>` : '<span class="text-danger">Agotado</span>';
-
-    // 3D / Imagen
-    const visualContainer = document.getElementById('visual-container');
-    if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf'))) {
-        visualContainer.innerHTML = `<div class="ratio ratio-16x9 bg-black rounded shadow"><model-viewer src="${p.model_url}" alt="${p.name}" auto-rotate camera-controls shadow-intensity="1" style="width:100%;height:100%"></model-viewer></div>`;
-    } else {
-        visualContainer.innerHTML = `<img src="${p.image_url}" class="img-fluid rounded w-100">`;
-    }
-    
-    loadReviews(id);
-    new bootstrap.Modal(document.getElementById('productModal')).show();
-};
-
-// ==========================================
-// 5. UTILIDADES Y AUTH
-// ==========================================
-
-function checkAuthStatus() {
-    const uStr = localStorage.getItem('user');
-    if (!uStr) return;
-    try {
-        const u = JSON.parse(uStr);
-        const div = document.getElementById('auth-section');
-        if (div && u) {
-            if (document.getElementById('admin-crown') && u.email === ADMIN_EMAIL) {
-                document.getElementById('admin-crown').style.display = 'block';
-            }
-            div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold border-0">SALIR</button>`;
-        }
-    } catch(e) {}
+// ==========================
+// 3. UTILIDADES & AUTH
+// ==========================
+function updateCartUI() {
+    const token = localStorage.getItem('token');
+    const el = document.getElementById('cart-count');
+    if(!token || !el) return;
+    fetch(`${API_URL}/store/cart`, {headers:{'Authorization':`Bearer ${token}`}})
+        .then(r=>r.json()).then(d=>{
+            const c = d.items?.reduce((a,b)=>a+b.quantity,0) || 0;
+            el.innerText = c; el.style.display = c > 0 ? 'block' : 'none';
+        });
 }
 
-window.logout = function() {
-    localStorage.clear();
-    window.location.href = 'index.html';
-};
-
-function generatePDF(items, total, orderId) {
-    if (!window.jspdf) return;
+function generatePDF(items, total, id) {
+    if(!window.jspdf) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const user = JSON.parse(localStorage.getItem('user'));
+    doc.setFillColor(10,10,10); doc.rect(0,0,210,40,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(22); doc.text("SPEEDCOLLECT RECIBO", 15, 25);
     
-    doc.text("RECIBO SPEEDCOLLECT", 20, 20);
-    doc.text(`Orden: ${orderId}`, 20, 30);
-    doc.text(`Cliente: ${user.name}`, 20, 40);
+    doc.setTextColor(0,0,0); doc.setFontSize(12);
+    doc.text(`Orden: #${id}`, 20, 50);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 60);
     
-    const body = items.map(i => [i.quantity, i.name, `$${i.price}`, `$${(i.price*i.quantity).toFixed(2)}`]);
-    doc.autoTable({ startY: 50, head: [['Cant', 'Item', 'Unit', 'Total']], body: body });
+    // Calcular IVA
+    const subtotal = parseFloat(total) / 1.19;
+    const iva = parseFloat(total) - subtotal;
+
+    const body = items.map(i => [i.quantity, i.name, `$${parseFloat(i.price).toLocaleString()}`, `$${(i.price*i.quantity).toLocaleString()}`]);
+    doc.autoTable({ startY: 70, head: [['Cant', 'Auto', 'Unit', 'Total']], body: body });
     
-    doc.text(`TOTAL + IVA: $${parseFloat(total).toFixed(2)}`, 140, doc.lastAutoTable.finalY + 20);
-    doc.save(`Recibo_${orderId}.pdf`);
+    let finalY = doc.lastAutoTable.finalY + 10;
+    doc.text(`Subtotal: $${subtotal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY);
+    doc.text(`IVA (19%): $${iva.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 10);
+    doc.setFont(undefined, 'bold');
+    doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, finalY + 20);
+    
+    doc.save(`Factura_${id}.pdf`);
 }
 
-// VENTA NOCTURNA
 function startCountdown() {
-    let time = 600;
+    let t = 600;
     setInterval(() => {
-        if(time <= 0) { 
-            if(!isOfferActive) activateNightSale(); 
-            return; 
-        }
-        time--;
-        const h = Math.floor(time/3600), m = Math.floor((time%3600)/60), s = time%60;
+        if(t <= 0) { if(!isOfferActive) activateNightSale(); return; }
+        t--;
+        const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
         const elH = document.getElementById('hours');
         if(elH) {
             elH.innerText = h<10?'0'+h:h; 
@@ -486,61 +358,89 @@ function startCountdown() {
 async function activateNightSale() {
     isOfferActive = true;
     try {
-        // Activar en backend
         await fetch(`${API_URL}/store/toggle-night-sale`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ active: true })
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({active:true})
         });
-        alert("🌙 VENTA NOCTURNA: Precios actualizados.");
-        loadCatalog(true); // Recargar precios visuales
-    } catch(e) {}
+        alert("🌙 VENTA NOCTURNA: ¡Precios actualizados!");
+        loadCatalog(true);
+        // Efecto visual
+        document.getElementById('offers').style.border = "2px solid #00ff00";
+    } catch(e){}
 }
 
-// RESEÑAS
-async function loadReviews(pid) {
-    const c = document.getElementById('reviewsContainer');
-    if(!c) return;
-    try {
-        const res = await fetch(`${API_URL}/products/${pid}/reviews`);
-        const d = await res.json();
-        c.innerHTML = d.length ? d.map(r => `<div class="small mb-2 text-white border-bottom border-secondary"><strong>${r.user_name}</strong>: ${r.comment}</div>`).join('') : '<small class="text-muted">Sin reseñas.</small>';
-    } catch(e) {}
-}
+// ==========================
+// 4. MODALES, LOGIN Y CHAT
+// ==========================
 
-async function handleReviewSubmit(e) {
-    e.preventDefault();
-    const token = localStorage.getItem('token');
-    if(!token) return alert("Inicia sesión.");
+// MODAL DE DETALLE (Ahora sí funciona porque allProducts tiene datos)
+window.openModal = function(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
     
-    const txt = document.getElementById('review-comment').value;
-    if(!txt) return;
+    currentProductModalId = id;
+    
+    let price = parseFloat(p.price);
+    let htmlPrice = `<span class="text-danger fw-bold fs-2">$${price.toLocaleString()}</span>`;
+    
+    if (p.discount) {
+        htmlPrice = `
+            <div class="d-flex flex-column">
+                <span class="text-decoration-line-through text-muted small">$${parseFloat(p.base_price).toLocaleString()}</span>
+                <span class="text-success fw-bold fs-2">$${price.toLocaleString()}</span>
+            </div>`;
+    }
 
-    await fetch(`${API_URL}/reviews`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json', 'Authorization':`Bearer ${token}`},
-        body: JSON.stringify({ productId: currentProductModalId, rating: 5, comment: txt })
-    });
-    loadReviews(currentProductModalId);
-    document.getElementById('review-comment').value = '';
-}
+    document.getElementById('modal-p-name').innerText = p.name;
+    document.getElementById('modal-p-desc').innerText = p.description;
+    document.getElementById('modal-p-price').innerHTML = htmlPrice;
+    document.getElementById('modal-p-stock').innerHTML = p.stock > 0 ? `<span class="text-success">Disponible: ${p.stock}</span>` : '<span class="text-danger">Agotado</span>';
 
-// CHATBOT
-function initChatbot() {
+    // 3D o Imagen
+    const visualContainer = document.getElementById('visual-container');
+    if(visualContainer) {
+        if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf'))) {
+            visualContainer.innerHTML = `
+                <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
+                    <model-viewer 
+                        src="${p.model_url}" 
+                        alt="${p.name}" 
+                        auto-rotate 
+                        camera-controls 
+                        shadow-intensity="1"
+                        style="width: 100%; height: 100%; background-color: #151515;"
+                    ></model-viewer>
+                    <div class="position-absolute bottom-0 w-100 text-center small text-white-50 py-1">Rotar 360°</div>
+                </div>`;
+        } else {
+            visualContainer.innerHTML = `<img src="${p.image_url}" class="img-fluid rounded w-100">`;
+        }
+    }
+    loadReviews(id);
+    new bootstrap.Modal(document.getElementById('productModal')).show();
+};
+
+function initChatbot() { 
     const t = document.getElementById('chatTrigger'), w = document.getElementById('chatWidget'), c = document.getElementById('closeChat'), s = document.getElementById('sendChat'), i = document.getElementById('chatInput'), b = document.getElementById('chatBody');
     if(!t) return;
     t.onclick = () => { w.style.display='flex'; t.style.display='none'; };
     c.onclick = () => { w.style.display='none'; t.style.display='flex'; };
     const send = () => {
         if(!i.value.trim()) return;
+        const msg = i.value.toLowerCase();
         b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${i.value}</span></div>`;
         i.value=''; b.scrollTop=b.scrollHeight;
-        setTimeout(()=> { b.innerHTML+=`<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Para precios y stock, revisa el catálogo.</span></div>`; b.scrollTop=b.scrollHeight; }, 1000);
+        
+        let reply = "Para ventas directas, usa WhatsApp.";
+        if(msg.includes('precio')) reply = "Los precios están en el catálogo.";
+        if(msg.includes('stock')) reply = "El stock es en tiempo real.";
+        if(msg.includes('envio')) reply = "Envíos a todo el país.";
+
+        setTimeout(()=> { b.innerHTML+=`<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">${reply}</span></div>`; b.scrollTop=b.scrollHeight; }, 800);
     };
     if(s) s.onclick = send;
     if(i) i.onkeypress = (e) => { if(e.key==='Enter') send(); };
 }
 
-// LOGIN Y REGISTER (CONECTADOS)
 function initStrictRegister() {
     const f = document.getElementById('register-form');
     const pInput = document.getElementById('reg-phone');
@@ -549,7 +449,8 @@ function initStrictRegister() {
     if(f) f.addEventListener('submit', async e => {
         e.preventDefault();
         const pass = document.getElementById('reg-pass').value;
-        if(pass.length < 8) return alert("Contraseña insegura.");
+        const msg = document.getElementById('global-msg') || document.createElement('div');
+        if(pass.length < 8) return alert("Contraseña insegura (min 8 chars)");
         
         try {
             const res = await fetch(`${API_URL}/auth/register`, {
@@ -590,56 +491,40 @@ function initLogin() {
     });
 }
 
-// --- ACTUALIZACIÓN loadCatalog PARA GLOBAL ARRAY ---
-// Esta función reemplaza la versión anterior para guardar en memoria
-// los productos y que el modal pueda abrirlos.
-async function loadCatalog(reset = false) {
-    const container = document.getElementById('products-container');
-    const loader = document.getElementById('loader');
-    const loadMoreBtn = document.getElementById('load-more-btn');
-
-    if (reset) {
-        currentPage = 0;
-        container.innerHTML = '';
-        window.catalogProducts = []; // Reset memoria
+function checkAuthStatus() { 
+    const u = localStorage.getItem('user');
+    if(u) {
+        const user = JSON.parse(u);
+        const div = document.getElementById('auth-section');
+        if(div) div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm">SALIR</button>`;
+        if(user.role==='admin' && document.getElementById('admin-crown')) document.getElementById('admin-crown').style.display='block';
     }
+}
+window.logout = function() { localStorage.clear(); window.location.href='index.html'; };
 
-    if(loader) loader.style.display = 'block';
-
-    try {
-        const activeCat = document.querySelector('#category-filters button.active');
-        const category = activeCat ? activeCat.dataset.filter : 'all';
-        const searchText = document.getElementById('search-input')?.value || '';
-        const maxPrice = document.getElementById('price-range')?.value || 1000000;
-
-        let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
-        if (category !== 'all') url += `&category=${category}`;
-        if (maxPrice) url += `&maxPrice=${maxPrice}`;
-        if (searchText.length === 1) url += `&initial=${searchText}`;
-        else if (searchText.length > 1) url += `&search=${searchText}`;
-
-        const res = await fetch(url);
-        const products = await res.json();
-
-        if(loader) loader.style.display = 'none';
-
-        // Guardar en variable global para que openModal funcione
-        if(reset) window.catalogProducts = products;
-        else window.catalogProducts = [...window.catalogProducts, ...products];
-
-        if (products.length === 0 && currentPage === 0) {
-            container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos.</h3></div>';
-            if(loadMoreBtn) loadMoreBtn.style.display = 'none';
-            return;
-        }
-
-        renderProducts(products);
-
-        if (loadMoreBtn) {
-            loadMoreBtn.style.display = products.length < ITEMS_PER_PAGE ? 'none' : 'inline-block';
-        }
-
-    } catch (e) {
-        if(loader) loader.innerHTML = '<p class="text-danger">Error de conexión.</p>';
+async function loadReviews(pid) {
+    const c = document.getElementById('reviewsContainer');
+    if(c) {
+        try {
+            const res = await fetch(`${API_URL}/products/${pid}/reviews`);
+            const d = await res.json();
+            c.innerHTML = d.length ? d.map(r => `<div class="small mb-2 text-white border-bottom border-secondary pb-1"><strong>${r.user_name}</strong>: ${r.comment}</div>`).join('') : '<small class="text-muted">Sin reseñas.</small>';
+        } catch(e) { c.innerHTML = '<small class="text-danger">Error cargando.</small>'; }
     }
+}
+
+async function handleReviewSubmit(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if(!token) return alert("Inicia sesión.");
+    const txt = document.getElementById('review-comment').value;
+    if(!txt) return;
+
+    await fetch(`${API_URL}/reviews`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'Authorization':`Bearer ${token}`},
+        body: JSON.stringify({ productId: currentProductModalId, rating: 5, comment: txt })
+    });
+    loadReviews(currentProductModalId);
+    document.getElementById('review-comment').value = '';
 }
