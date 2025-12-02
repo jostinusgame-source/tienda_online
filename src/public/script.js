@@ -1,12 +1,12 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V4)
- * Corrección: Visor 3D Desbloqueado (Movimiento Libre)
+ * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V5 - CORREGIDO)
+ * Incluye todas las funciones de autenticación y utilidades.
  */
 
 console.log("✅ Script Cargado.");
 
 const API_URL = '/api'; 
-let allProducts = []; // Memoria global de productos cargados
+let allProducts = []; 
 let currentProductModalId = null;
 let itiInstance = null; 
 let isOfferActive = false;
@@ -25,8 +25,9 @@ const DISCOUNT_RATE = 0.20;
 document.addEventListener('DOMContentLoaded', () => {
     
     // 1. Auth & UI Base
+    // Estas funciones ahora SÍ están definidas al final del archivo
     checkAuthStatus();
-    updateCartUI(); // Sincroniza bolita roja con DB
+    updateCartUI(); 
     initChatbot(); 
 
     // 2. Detectar página y cargar módulos
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Lógica de Tienda (Catálogo)
     if (storeContainer) { 
         setupStoreListeners();
-        loadCatalog(true); // Carga inicial (Reset = true)
+        loadCatalog(true); 
         if(countdownEl) startCountdown(); 
     }
     
@@ -54,20 +55,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. CATÁLOGO INTELIGENTE (Paginación y Filtros)
+// 2. CATÁLOGO INTELIGENTE
 // ==========================================
 
 function setupStoreListeners() {
-    // Filtros Categoría
     document.querySelectorAll('#category-filters button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-            loadCatalog(true); // Resetear y cargar nueva categoría
+            loadCatalog(true); 
         });
     });
 
-    // Buscador (Debounce para no saturar)
     const sInput = document.getElementById('search-input');
     let timeout = null;
     if(sInput) {
@@ -77,17 +76,15 @@ function setupStoreListeners() {
         });
     }
 
-    // Filtro Precio
     const pRange = document.getElementById('price-range');
     const pVal = document.getElementById('price-val');
     if(pRange) {
         pRange.addEventListener('input', (e) => {
             if(pVal) pVal.innerText = `$${parseInt(e.target.value).toLocaleString()}`;
         });
-        pRange.addEventListener('change', () => loadCatalog(true)); // Cargar al soltar
+        pRange.addEventListener('change', () => loadCatalog(true)); 
     }
 
-    // Botón Cargar Más (Creación dinámica si no existe en HTML)
     if(!document.getElementById('load-more-btn')) {
         const moreBtn = document.createElement('button');
         moreBtn.id = 'load-more-btn';
@@ -96,23 +93,15 @@ function setupStoreListeners() {
         moreBtn.style.display = 'none';
         moreBtn.onclick = () => {
             currentPage++;
-            loadCatalog(false); // No resetear, añadir al final
+            loadCatalog(false); 
         };
         const container = document.getElementById('products-container');
         if(container && container.parentNode) {
             container.parentNode.appendChild(moreBtn);
         }
-    } else {
-        // Si ya existe (lo pusimos en el HTML), le damos funcionalidad
-        const moreBtn = document.getElementById('load-more-btn');
-        moreBtn.onclick = () => {
-            currentPage++;
-            loadCatalog(false);
-        };
     }
 }
 
-// FUNCIÓN MAESTRA DE CARGA
 async function loadCatalog(reset = false) {
     const container = document.getElementById('products-container');
     const loader = document.getElementById('loader');
@@ -121,31 +110,25 @@ async function loadCatalog(reset = false) {
     if (reset) {
         currentPage = 0;
         if(container) container.innerHTML = '';
-        allProducts = []; // Limpiar memoria para nueva búsqueda
-        if(container) container.classList.remove('d-none'); // Asegurar visible
+        allProducts = []; 
+        if(container) container.classList.remove('d-none'); 
     }
 
     if(loader) loader.style.display = 'block';
 
     try {
-        // Recoger filtros
         const activeCat = document.querySelector('#category-filters button.active');
         const category = activeCat ? activeCat.dataset.filter : 'all';
         const searchText = document.getElementById('search-input')?.value || '';
         const maxPrice = document.getElementById('price-range')?.value || 1000000;
 
-        // Construir URL con parámetros
         let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
         
         if (category !== 'all') url += `&category=${category}`;
         if (maxPrice) url += `&maxPrice=${maxPrice}`;
         
-        // Lógica Inicial vs Búsqueda completa
-        if (searchText.length === 1) {
-            url += `&initial=${searchText}`; // Busca por letra inicial (Ej: C -> Chevrolet)
-        } else if (searchText.length > 1) {
-            url += `&search=${searchText}`; // Busca coincidencia completa
-        }
+        if (searchText.length === 1) url += `&initial=${searchText}`; 
+        else if (searchText.length > 1) url += `&search=${searchText}`; 
 
         const res = await fetch(url);
         
@@ -161,7 +144,6 @@ async function loadCatalog(reset = false) {
             return;
         }
 
-        // IMPORTANTE: Guardar en memoria global para que los modales funcionen
         if (reset) {
             allProducts = newProducts;
         } else {
@@ -170,7 +152,6 @@ async function loadCatalog(reset = false) {
 
         renderProducts(newProducts);
 
-        // Controlar botón "Cargar Más"
         if (loadMoreBtn) {
             loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
         }
@@ -192,7 +173,6 @@ function renderProducts(products) {
         const isOut = p.stock <= 0;
         const img = p.image_url || 'https://via.placeholder.com/400';
         
-        // Manejo de Precio (Normal vs Oferta)
         let price = parseFloat(p.price);
         let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
 
@@ -217,8 +197,9 @@ function renderProducts(products) {
                     ${overlay}
                 </div>
                 <div class="card-body bg-black text-white">
-                    <h5 class="fw-bold text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
+                    <h5 class="fw-bold text-uppercase mb-1 text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
+                    <small class="text-silver mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
+                    <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
                         ${priceHtml}
                         <button class="btn btn-outline-danger btn-sm rounded-circle p-2" onclick="event.stopPropagation(); addToCart(${p.id})"><i class="fa-solid fa-cart-plus"></i></button>
                     </div>
@@ -231,7 +212,7 @@ function renderProducts(products) {
 }
 
 // ==========================
-// 3. MODAL DETALLE (3D INTERACTIVO LIBRE)
+// 3. MODAL DETALLE
 // ==========================
 window.openModal = function(id) {
     const p = allProducts.find(x => x.id === id);
@@ -254,7 +235,6 @@ window.openModal = function(id) {
 
     const visual = document.getElementById('visual-container');
     if(visual) {
-        // CORRECCIÓN 3D: Detección amplia y sin restricciones de movimiento
         if (p.model_url && (p.model_url.includes('.glb') || p.model_url.includes('.gltf'))) {
             visual.innerHTML = `
                 <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
@@ -264,12 +244,11 @@ window.openModal = function(id) {
                         auto-rotate 
                         camera-controls 
                         ar
-                        ar-modes="webxr scene-viewer quick-look"
                         shadow-intensity="1" 
                         style="width: 100%; height: 100%; background-color: #151515;"
                     ></model-viewer>
                     <div class="position-absolute bottom-0 w-100 text-center text-white-50 small py-1" style="background:rgba(0,0,0,0.6)">
-                        <i class="fa-solid fa-hand-pointer"></i> Mueve para rotar | Rueda para Zoom
+                        <i class="fa-solid fa-hand-pointer"></i> Mueve para rotar 360°
                     </div>
                 </div>`;
         } else {
@@ -282,7 +261,7 @@ window.openModal = function(id) {
 };
 
 // ==========================
-// 4. CARRITO, PAGOS & UTILIDADES
+// 4. CARRITO Y PAGOS
 // ==========================
 
 window.addToCart = async function(id) {
@@ -340,20 +319,26 @@ window.checkout = async function() {
             alert("¡COMPRA EXITOSA! El auto es legalmente tuyo.");
             updateCartUI();
             bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-            loadCatalog(true); // Actualizar stock visual
+            loadCatalog(true); 
         } else alert("Error: " + d.message);
     } catch(e) { alert("Error procesando la transacción."); }
 };
 
-function updateCartUI() {
+// =======================================================
+// 5. UTILIDADES OBLIGATORIAS (ESTAS FALTABAN ANTES)
+// =======================================================
+
+async function updateCartUI() {
     const token = localStorage.getItem('token');
     const el = document.getElementById('cart-count');
     if(!token || !el) return;
-    fetch(`${API_URL}/store/cart`, {headers:{'Authorization':`Bearer ${token}`}})
-        .then(r=>r.json()).then(d=>{
-            const c = d.items?.reduce((a,b)=>a+b.quantity,0) || 0;
-            el.innerText = c; el.style.display = c > 0 ? 'block' : 'none';
-        });
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, {headers:{'Authorization':`Bearer ${token}`}});
+        if(res.status === 401) { window.logout(); return; }
+        const d = await res.json();
+        const c = d.items?.reduce((a,b)=>a+b.quantity,0) || 0;
+        el.innerText = c; el.style.display = c > 0 ? 'block' : 'none';
+    } catch(e) {}
 }
 
 function generatePDF(items, total, id) {
@@ -367,7 +352,7 @@ function generatePDF(items, total, id) {
     
     doc.setTextColor(0,0,0); doc.setFontSize(12);
     doc.text(`Orden: #${id}`, 15, 50);
-    doc.text(`Cliente: ${user.name}`, 15, 60);
+    doc.text(`Cliente: ${user ? user.name : 'Invitado'}`, 15, 60);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 70);
     
     const subtotal = parseFloat(total) / 1.19;
@@ -381,11 +366,25 @@ function generatePDF(items, total, id) {
     doc.text(`IVA (19%): $${iva.toLocaleString(undefined,{maximumFractionDigits:2})}`, 130, y+10);
     doc.setFont(undefined, 'bold');
     doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, y+20);
-    
     doc.save(`Factura_${id}.pdf`);
 }
 
-// VENTA NOCTURNA
+function checkAuthStatus() { 
+    const u = localStorage.getItem('user');
+    if(u) {
+        const user = JSON.parse(u);
+        const div = document.getElementById('auth-section');
+        const crown = document.getElementById('admin-crown');
+        if(div) div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold border-0">SALIR</button>`;
+        if(crown && user.email === ADMIN_EMAIL) crown.style.display='block';
+    }
+}
+
+window.logout = function() { 
+    localStorage.clear(); 
+    window.location.href='index.html'; 
+};
+
 function startCountdown() {
     let t = 600;
     setInterval(() => {
@@ -425,108 +424,84 @@ function initChatbot() {
         const msg = i.value.toLowerCase();
         b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${i.value}</span></div>`;
         i.value=''; b.scrollTop=b.scrollHeight;
-        
-        let reply = "Para ventas directas, usa WhatsApp.";
-        if(msg.includes('precio')) reply = "Los precios están en el catálogo.";
-        if(msg.includes('stock')) reply = "El stock es en tiempo real.";
-        if(msg.includes('envio')) reply = "Envíos a todo el país.";
-
-        setTimeout(()=> { b.innerHTML+=`<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">${reply}</span></div>`; b.scrollTop=b.scrollHeight; }, 800);
+        setTimeout(()=> { b.innerHTML+=`<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Para soporte técnico, usa el WhatsApp.</span></div>`; b.scrollTop=b.scrollHeight; }, 1000);
     };
     if(s) s.onclick = send;
     if(i) i.onkeypress = (e) => { if(e.key==='Enter') send(); };
 }
 
+// AUTH FORMS
 function initStrictRegister() {
     const f = document.getElementById('register-form');
     const pInput = document.getElementById('reg-phone');
-    
-    if (pInput && window.intlTelInput) {
-        itiInstance = window.intlTelInput(pInput, {
-            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
-            initialCountry: "auto",
-            geoIpLookup: cb => fetch("https://ipapi.co/json").then(r=>r.json()).then(d=>cb(d.country_code)).catch(()=>cb("co"))
-        });
-    }
+    if(pInput && window.intlTelInput) itiInstance = window.intlTelInput(pInput, { utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js", initialCountry: "auto", geoIpLookup: cb => fetch("https://ipapi.co/json").then(r=>r.json()).then(d=>cb(d.country_code)).catch(()=>cb("co")) });
 
-    if (f) {
-        f.addEventListener('submit', async e => {
-            e.preventDefault();
-            const pass = document.getElementById('reg-pass').value;
-            const msg = document.getElementById('global-msg') || document.createElement('div');
-            if (pass.length < 8) return alert("Contraseña insegura (min 8 chars)");
-            
-            try {
-                const res = await fetch(`${API_URL}/auth/register`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: document.getElementById('reg-name').value,
-                        email: document.getElementById('reg-email').value,
-                        password: pass,
-                        phone: itiInstance ? itiInstance.getNumber() : pInput.value
-                    })
-                });
-                const d = await res.json();
-                if (res.ok) {
-                    alert(d.message);
-                    window.location.href = 'login.html';
-                } else {
-                    alert(d.message);
-                }
-            } catch (err) { alert("Error servidor"); }
-        });
-    }
+    if(f) f.addEventListener('submit', async e => {
+        e.preventDefault();
+        const pass = document.getElementById('reg-pass').value;
+        if(pass.length < 8) return alert("Contraseña insegura");
+        
+        try {
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    name: document.getElementById('reg-name').value,
+                    email: document.getElementById('reg-email').value,
+                    password: pass,
+                    phone: itiInstance ? itiInstance.getNumber() : pInput.value
+                })
+            });
+            const d = await res.json();
+            if(res.ok) { alert(d.message); window.location.href='login.html'; }
+            else alert(d.message);
+        } catch(err) { alert("Error servidor"); }
+    });
 }
 
 function initLogin() {
     const f = document.getElementById('login-form');
-    if (f) {
-        f.addEventListener('submit', async e => {
-            e.preventDefault();
-            try {
-                const res = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email: document.getElementById('login-email').value,
-                        password: document.getElementById('login-pass').value
-                    })
-                });
-                const d = await res.json();
-                if (res.ok) {
-                    localStorage.setItem('token', d.token);
-                    localStorage.setItem('user', JSON.stringify(d.user));
-                    window.location.href = 'index.html';
-                } else {
-                    alert(d.message);
-                }
-            } catch (err) { alert("Error conexión"); }
-        });
-    }
+    if(f) f.addEventListener('submit', async e => {
+        e.preventDefault();
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    email: document.getElementById('login-email').value,
+                    password: document.getElementById('login-pass').value
+                })
+            });
+            const d = await res.json();
+            if(res.ok) {
+                localStorage.setItem('token', d.token);
+                localStorage.setItem('user', JSON.stringify(d.user));
+                window.location.href='index.html';
+            } else alert(d.message);
+        } catch(err) { alert("Error conexión"); }
+    });
 }
 
+// RESEÑAS
 async function loadReviews(pid) {
     const c = document.getElementById('reviewsContainer');
-    if (c) {
+    if(c) {
         try {
             const res = await fetch(`${API_URL}/products/${pid}/reviews`);
             const d = await res.json();
             c.innerHTML = d.length ? d.map(r => `<div class="small mb-2 text-white border-bottom border-secondary pb-1"><strong>${r.user_name}</strong>: ${r.comment}</div>`).join('') : '<small class="text-muted">Sin reseñas.</small>';
-        } catch (e) { c.innerHTML = '<small class="text-danger">Error cargando.</small>'; }
+        } catch(e) { c.innerHTML = '<small class="text-danger">Error cargando.</small>'; }
     }
 }
 
 async function handleReviewSubmit(e) {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    if (!token) return alert("Inicia sesión.");
+    if(!token) return alert("Inicia sesión.");
     const txt = document.getElementById('review-comment').value;
-    if (!txt) return;
+    if(!txt) return;
 
     await fetch(`${API_URL}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        method:'POST',
+        headers:{'Content-Type':'application/json', 'Authorization':`Bearer ${token}`},
         body: JSON.stringify({ productId: currentProductModalId, rating: 5, comment: txt })
     });
     loadReviews(currentProductModalId);
