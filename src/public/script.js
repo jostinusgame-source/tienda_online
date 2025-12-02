@@ -1,6 +1,6 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO (CORREGIDO)
- * Fase 1: Stock Real, Paginación y Validaciones Bancarias
+ * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL)
+ * Fase 1: Stock Real, Paginación, 3D y Validaciones Bancarias
  */
 
 const API_URL = '/api'; 
@@ -98,7 +98,8 @@ function setupStoreListeners() {
             loadCatalog(false); // No resetear, añadir al final
         };
         const container = document.getElementById('products-container');
-        container.parentNode.appendChild(moreBtn);
+        // Insertar después del contenedor
+        if(container.parentNode) container.parentNode.appendChild(moreBtn);
     }
 }
 
@@ -110,7 +111,7 @@ async function loadCatalog(reset = false) {
 
     if (reset) {
         currentPage = 0;
-        container.innerHTML = '';
+        if(container) container.innerHTML = '';
         allProducts = []; // Limpiar memoria para nueva búsqueda
     }
 
@@ -145,7 +146,7 @@ async function loadCatalog(reset = false) {
         if(loader) loader.style.display = 'none';
 
         if (newProducts.length === 0 && currentPage === 0) {
-            container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
+            if(container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
             if(loadMoreBtn) loadMoreBtn.style.display = 'none';
             return;
         }
@@ -169,13 +170,14 @@ async function loadCatalog(reset = false) {
         console.error(e);
         if(loader) {
             loader.style.display = 'none';
-            container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
+            if(container) container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
         }
     }
 }
 
 function renderProducts(products) {
     const container = document.getElementById('products-container');
+    if(!container) return;
     
     const html = products.map(p => {
         const isOut = p.stock <= 0;
@@ -259,6 +261,9 @@ window.openPaymentModal = async function() {
     
     try {
         const res = await fetch(`${API_URL}/store/cart`, { headers: {'Authorization':`Bearer ${token}`} });
+        // Manejo de error 401
+        if(res.status === 401) { window.logout(); return; }
+        
         const data = await res.json();
         
         window.currentCartItems = data.items; // Guardar para PDF
@@ -270,7 +275,7 @@ window.openPaymentModal = async function() {
         } else {
             list.innerHTML = data.items.map(i => `
                 <div class="d-flex justify-content-between align-items-center mb-2 border-bottom border-secondary pb-1">
-                    <div><span class="fw-bold">${i.quantity}x</span> ${i.name}</div>
+                    <div><span class="fw-bold text-white">${i.quantity}x</span> ${i.name}</div>
                     <span class="text-success fw-bold">$${(i.price*i.quantity).toLocaleString()}</span>
                 </div>`).join('');
         }
@@ -300,79 +305,8 @@ window.checkout = async function() {
 };
 
 // ==========================
-// 3. UTILIDADES & AUTH
+// 3. MODAL DETALLE (3D & IMAGEN)
 // ==========================
-function updateCartUI() {
-    const token = localStorage.getItem('token');
-    const el = document.getElementById('cart-count');
-    if(!token || !el) return;
-    fetch(`${API_URL}/store/cart`, {headers:{'Authorization':`Bearer ${token}`}})
-        .then(r=>r.json()).then(d=>{
-            const c = d.items?.reduce((a,b)=>a+b.quantity,0) || 0;
-            el.innerText = c; el.style.display = c > 0 ? 'block' : 'none';
-        });
-}
-
-function generatePDF(items, total, id) {
-    if(!window.jspdf) return;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.setFillColor(10,10,10); doc.rect(0,0,210,40,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(22); doc.text("SPEEDCOLLECT RECIBO", 15, 25);
-    
-    doc.setTextColor(0,0,0); doc.setFontSize(12);
-    doc.text(`Orden: #${id}`, 20, 50);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 20, 60);
-    
-    // Calcular IVA
-    const subtotal = parseFloat(total) / 1.19;
-    const iva = parseFloat(total) - subtotal;
-
-    const body = items.map(i => [i.quantity, i.name, `$${parseFloat(i.price).toLocaleString()}`, `$${(i.price*i.quantity).toLocaleString()}`]);
-    doc.autoTable({ startY: 70, head: [['Cant', 'Auto', 'Unit', 'Total']], body: body });
-    
-    let finalY = doc.lastAutoTable.finalY + 10;
-    doc.text(`Subtotal: $${subtotal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY);
-    doc.text(`IVA (19%): $${iva.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 10);
-    doc.setFont(undefined, 'bold');
-    doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, finalY + 20);
-    
-    doc.save(`Factura_${id}.pdf`);
-}
-
-function startCountdown() {
-    let t = 600;
-    setInterval(() => {
-        if(t <= 0) { if(!isOfferActive) activateNightSale(); return; }
-        t--;
-        const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
-        const elH = document.getElementById('hours');
-        if(elH) {
-            elH.innerText = h<10?'0'+h:h; 
-            document.getElementById('minutes').innerText = m<10?'0'+m:m; 
-            document.getElementById('seconds').innerText = s<10?'0'+s:s;
-        }
-    }, 1000);
-}
-
-async function activateNightSale() {
-    isOfferActive = true;
-    try {
-        await fetch(`${API_URL}/store/toggle-night-sale`, {
-            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({active:true})
-        });
-        alert("🌙 VENTA NOCTURNA: ¡Precios actualizados!");
-        loadCatalog(true);
-        // Efecto visual
-        document.getElementById('offers').style.border = "2px solid #00ff00";
-    } catch(e){}
-}
-
-// ==========================
-// 4. MODALES, LOGIN Y CHAT
-// ==========================
-
-// MODAL DE DETALLE (Ahora sí funciona porque allProducts tiene datos)
 window.openModal = function(id) {
     const p = allProducts.find(x => x.id === id);
     if (!p) return;
@@ -415,10 +349,87 @@ window.openModal = function(id) {
             visualContainer.innerHTML = `<img src="${p.image_url}" class="img-fluid rounded w-100">`;
         }
     }
+    
     loadReviews(id);
     new bootstrap.Modal(document.getElementById('productModal')).show();
 };
 
+// ==========================
+// 4. UTILIDADES & AUTH
+// ==========================
+async function updateCartUI() {
+    const token = localStorage.getItem('token');
+    const el = document.getElementById('cart-count');
+    if(!token || !el) return;
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, {headers:{'Authorization':`Bearer ${token}`}});
+        if(res.status === 401) { window.logout(); return; }
+        const d = await res.json();
+        const c = d.items?.reduce((a,b)=>a+b.quantity,0) || 0;
+        el.innerText = c; el.style.display = c > 0 ? 'block' : 'none';
+    } catch(e) {}
+}
+
+function generatePDF(items, total, id) {
+    if(!window.jspdf) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    doc.setFillColor(10,10,10); doc.rect(0,0,210,40,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(22); doc.text("SPEEDCOLLECT RECIBO", 15, 25);
+    
+    doc.setTextColor(0,0,0); doc.setFontSize(12);
+    doc.text(`Orden: #${id}`, 15, 50);
+    doc.text(`Cliente: ${user ? user.name : 'Cliente VIP'}`, 15, 60);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 70);
+    
+    // Calcular IVA
+    const subtotal = parseFloat(total) / 1.19;
+    const iva = parseFloat(total) - subtotal;
+
+    const body = items.map(i => [i.quantity, i.name, `$${parseFloat(i.price).toLocaleString()}`, `$${(i.price*i.quantity).toLocaleString()}`]);
+    doc.autoTable({ startY: 80, head: [['Cant', 'Auto', 'Unit', 'Total']], body: body });
+    
+    let finalY = doc.lastAutoTable.finalY + 10;
+    doc.text(`Subtotal: $${subtotal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY);
+    doc.text(`IVA (19%): $${iva.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 10);
+    doc.setFont(undefined, 'bold');
+    doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, finalY + 20);
+    
+    doc.save(`Factura_${id}.pdf`);
+}
+
+function startCountdown() {
+    let t = 600;
+    setInterval(() => {
+        if(t <= 0) { if(!isOfferActive) activateNightSale(); return; }
+        t--;
+        const h=Math.floor(t/3600), m=Math.floor((t%3600)/60), s=t%60;
+        const elH = document.getElementById('hours');
+        if(elH) {
+            elH.innerText = h<10?'0'+h:h; 
+            document.getElementById('minutes').innerText = m<10?'0'+m:m; 
+            document.getElementById('seconds').innerText = s<10?'0'+s:s;
+        }
+    }, 1000);
+}
+
+async function activateNightSale() {
+    isOfferActive = true;
+    try {
+        await fetch(`${API_URL}/store/toggle-night-sale`, {
+            method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({active:true})
+        });
+        alert("🌙 VENTA NOCTURNA: ¡Precios actualizados!");
+        loadCatalog(true);
+        // Efecto visual
+        const offers = document.getElementById('offers');
+        if(offers) offers.style.border = "2px solid #00ff00";
+    } catch(e){}
+}
+
+// BOT Y LOGIN
 function initChatbot() { 
     const t = document.getElementById('chatTrigger'), w = document.getElementById('chatWidget'), c = document.getElementById('closeChat'), s = document.getElementById('sendChat'), i = document.getElementById('chatInput'), b = document.getElementById('chatBody');
     if(!t) return;
