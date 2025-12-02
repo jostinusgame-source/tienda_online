@@ -1,6 +1,6 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V2)
- * Corrección de sintaxis y estabilidad global
+ * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V3)
+ * Corrección: Visibilidad del Catálogo y Depuración
  */
 
 console.log("🚀 Script de SpeedCollect cargando...");
@@ -22,20 +22,19 @@ const DISCOUNT_RATE = 0.20;
 // ==========================================
 // 1. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
 // ==========================================
-// Definimos estas funciones primero para asegurar que existan en el objeto window
 
 window.openPaymentModal = async function() {
-    console.log("Intentando abrir carrito...");
+    console.log("Abriendo carrito...");
     const token = localStorage.getItem('token');
     
     if (!token) {
-        // Si existe el modal de login, úsalo, si no, alerta
         const loginModalEl = document.getElementById('loginRequiredModal');
         if(loginModalEl && window.bootstrap) {
             new bootstrap.Modal(loginModalEl).show();
         } else {
-            alert("Debes iniciar sesión para ver tu garaje.");
-            window.location.href = 'login.html';
+            if(confirm("Debes iniciar sesión para ver tu garaje. ¿Ir al login?")) {
+                window.location.href = 'login.html';
+            }
         }
         return;
     }
@@ -81,7 +80,7 @@ window.openPaymentModal = async function() {
         }
 
     } catch (e) {
-        console.error(e);
+        console.error("Error carrito:", e);
         alert("No se pudo sincronizar el garaje con el servidor.");
     }
 };
@@ -210,8 +209,7 @@ window.checkout = async function() {
                 bootstrap.Modal.getInstance(modalEl).hide();
             }
             
-            // Recargar catálogo para actualizar stocks visualmente
-            loadCatalog(true);
+            loadCatalog(true); // Actualizar stock visual
         } else {
             alert(`❌ Error: ${data.message}`);
         }
@@ -230,19 +228,16 @@ window.logout = function() {
 // 2. INICIALIZACIÓN (DOM READY)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Auth & UI Base
     checkAuthStatus();
     updateCartUI(); 
     initChatbot(); 
 
-    // 2. Detectar elementos
     const storeContainer = document.getElementById('products-container');
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
     const reviewForm = document.getElementById('reviewForm');
     const countdownEl = document.getElementById('seconds');
 
-    // 3. Cargar módulos
     if (storeContainer) { 
         setupStoreListeners();
         loadCatalog(true); 
@@ -262,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // ==========================================
 
 function setupStoreListeners() {
-    // Filtros Categoría
     document.querySelectorAll('#category-filters button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
@@ -271,7 +265,6 @@ function setupStoreListeners() {
         });
     });
 
-    // Buscador
     const sInput = document.getElementById('search-input');
     let timeout = null;
     if (sInput) {
@@ -281,7 +274,6 @@ function setupStoreListeners() {
         });
     }
 
-    // Filtro Precio
     const pRange = document.getElementById('price-range');
     const pVal = document.getElementById('price-val');
     if (pRange) {
@@ -291,7 +283,7 @@ function setupStoreListeners() {
         pRange.addEventListener('change', () => loadCatalog(true));
     }
 
-    // Crear botón Cargar Más
+    // Crear botón Cargar Más si no existe
     if (!document.getElementById('load-more-btn') && document.getElementById('products-container')) {
         const moreBtn = document.createElement('button');
         moreBtn.id = 'load-more-btn';
@@ -323,7 +315,6 @@ async function loadCatalog(reset = false) {
     if (loader) loader.style.display = 'block';
 
     try {
-        // Recoger filtros
         const activeCat = document.querySelector('#category-filters button.active');
         const category = activeCat ? activeCat.dataset.filter : 'all';
         const searchText = document.getElementById('search-input')?.value || '';
@@ -340,16 +331,21 @@ async function loadCatalog(reset = false) {
             url += `&search=${searchText}`; 
         }
 
+        console.log("Fetching catalog:", url); // Debug
+
         const res = await fetch(url);
         
-        if (!res.ok) throw new Error("Error en servidor");
+        if (!res.ok) throw new Error("Error en servidor: " + res.status);
         
         const newProducts = await res.json();
 
         if (loader) loader.style.display = 'none';
+        
+        // CORRECCIÓN IMPORTANTE: HACER VISIBLE EL CONTENEDOR
+        if (container) container.classList.remove('d-none');
 
         if (newProducts.length === 0 && currentPage === 0) {
-            if (container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos.</h3></div>';
+            if (container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
             if (loadMoreBtn) loadMoreBtn.style.display = 'none';
             return;
         }
@@ -367,10 +363,13 @@ async function loadCatalog(reset = false) {
         }
 
     } catch (e) {
-        console.error(e);
+        console.error("Error loadCatalog:", e);
         if (loader) {
             loader.style.display = 'none';
-            if (container) container.innerHTML = '<p class="text-danger text-center">Error de conexión.</p>';
+            if (container) {
+                container.classList.remove('d-none'); // Asegurar que se vea el error
+                container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
+            }
         }
     }
 }
@@ -394,11 +393,8 @@ function renderProducts(products) {
                 </div>`;
         }
 
-        // Etiqueta 3D
         const badge3D = p.model_url ? 
             '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-white"><i class="fa-solid fa-cube"></i> 3D</div>' : '';
-
-        // Overlay Agotado
         const overlaySold = isOut ? 
             '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : '';
 
@@ -467,11 +463,9 @@ function checkAuthStatus() {
         const crown = document.getElementById('admin-crown');
         
         if (div && u) {
-            // Mostrar corona si es admin
             if (crown && u.email === ADMIN_EMAIL) {
                 crown.style.display = 'block';
             }
-            
             div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold border-0">SALIR</button>`;
         }
     } catch (e) {}
