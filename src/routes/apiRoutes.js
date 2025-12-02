@@ -5,33 +5,40 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const storeController = require('../controllers/storeController');
 const reviewController = require('../controllers/reviewController');
-const { chatWithConcierge } = require('../controllers/aiController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // ==========================
-// 1. RUTAS DE TIENDA (Públicas) - ESTAS ERAN LAS QUE FALLABAN
+// 1. RUTAS PÚBLICAS (Cualquiera puede verlas)
 // ==========================
-router.get('/store/products', storeController.getProducts); // Esta carga el catálogo
-router.get('/products/:productId/reviews', reviewController.getProductReviews); // Esta carga reseñas
+// Verificar estado de API
+router.get('/', (req, res) => res.send('API funcionando correctamente 🚀'));
 
-// ==========================
-// 2. RUTAS DE AUTH (Públicas)
-// ==========================
+// Autenticación
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
 
+// Tienda - Catálogo y Reseñas Públicas
+router.get('/store/products', storeController.getProducts);
+router.get('/products/:productId/reviews', reviewController.getProductReviews);
+
 // ==========================
-// 3. RUTAS PROTEGIDAS (Requieren Login)
+// 2. RUTAS PROTEGIDAS (Requieren Token/Login)
 // ==========================
-// Comprar
-router.post('/store/order', authMiddleware.protect, storeController.createOrder);
+// Middleware de seguridad se aplica aquí: authMiddleware.protect
+
+// Gestión del Carrito
+router.post('/store/cart', authMiddleware.protect, storeController.addToCart); // Agregar item
+router.get('/store/cart', authMiddleware.protect, storeController.getCart);    // Ver carrito
+router.post('/store/checkout', authMiddleware.protect, storeController.checkout); // Pagar
+
 // Publicar Reseña
 router.post('/reviews', authMiddleware.protect, reviewController.addReview);
-// Chat IA
-router.post('/ai/chat', chatWithConcierge);
 
-// Admin (Opcional)
+// ==========================
+// 3. RUTAS DE ADMIN (Requieren Rol 'admin')
+// ==========================
 router.get('/auth/users', authMiddleware.protect, authMiddleware.adminOnly, authController.getAllUsers);
 router.delete('/auth/users/:id', authMiddleware.protect, authMiddleware.adminOnly, authController.deleteUser);
+router.post('/store/toggle-night-sale', authMiddleware.protect, authMiddleware.adminOnly, storeController.toggleNightSale);
 
 module.exports = router;
