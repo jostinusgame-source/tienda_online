@@ -1,12 +1,12 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL DEFINITIVO)
- * Funciones: Catálogo, Stock Real, PDF, Reseñas y Validaciones.
+ * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V6)
+ * Correcciones: Reseñas en tiempo real y Catálogo estable.
  */
 
 console.log("✅ Script Cargado Correctamente.");
 
 const API_URL = '/api'; 
-let allProducts = []; // Memoria global para modales
+let allProducts = []; // Memoria global para que el modal encuentre los datos
 let currentProductModalId = null;
 let itiInstance = null; 
 let isOfferActive = false;
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 1. Auth & UI Base
     checkAuthStatus();
-    updateCartUI(); 
+    updateCartUI(); // Sincroniza bolita roja con DB
     initChatbot(); 
 
     // 2. Detectar página y cargar módulos
@@ -54,187 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// 2. CATÁLOGO INTELIGENTE (Paginación y Filtros)
+// 2. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
 // ==========================================
 
-function setupStoreListeners() {
-    // Filtros Categoría
-    document.querySelectorAll('#category-filters button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            loadCatalog(true); // Resetear y cargar nueva categoría
-        });
-    });
-
-    // Buscador (Debounce)
-    const sInput = document.getElementById('search-input');
-    let timeout = null;
-    if(sInput) {
-        sInput.addEventListener('input', () => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => loadCatalog(true), 500);
-        });
-    }
-
-    // Filtro Precio
-    const pRange = document.getElementById('price-range');
-    const pVal = document.getElementById('price-val');
-    if(pRange) {
-        pRange.addEventListener('input', (e) => {
-            if(pVal) pVal.innerText = `$${parseInt(e.target.value).toLocaleString()}`;
-        });
-        pRange.addEventListener('change', () => loadCatalog(true)); 
-    }
-
-    // Botón Cargar Más (Creación dinámica si no existe)
-    if(!document.getElementById('load-more-btn')) {
-        const moreBtn = document.createElement('button');
-        moreBtn.id = 'load-more-btn';
-        moreBtn.className = 'btn btn-outline-light d-block mx-auto mt-4 mb-5 fw-bold';
-        moreBtn.innerText = 'CARGAR MÁS MODELOS';
-        moreBtn.style.display = 'none';
-        moreBtn.onclick = () => {
-            currentPage++;
-            loadCatalog(false); // No resetear, añadir al final
-        };
-        const container = document.getElementById('products-container');
-        // Insertar después del contenedor de productos
-        if(container && container.parentNode) {
-            container.parentNode.appendChild(moreBtn);
-        }
-    }
-}
-
-// FUNCIÓN MAESTRA DE CARGA
-async function loadCatalog(reset = false) {
-    const container = document.getElementById('products-container');
-    const loader = document.getElementById('loader');
-    const loadMoreBtn = document.getElementById('load-more-btn');
-
-    if (reset) {
-        currentPage = 0;
-        if(container) {
-            container.innerHTML = '';
-            container.classList.remove('d-none'); // Asegurar visibilidad
-        }
-        allProducts = []; // Limpiar memoria
-    }
-
-    if(loader) loader.style.display = 'block';
-
-    try {
-        // Recoger filtros
-        const activeCat = document.querySelector('#category-filters button.active');
-        const category = activeCat ? activeCat.dataset.filter : 'all';
-        const searchText = document.getElementById('search-input')?.value || '';
-        const maxPrice = document.getElementById('price-range')?.value || 1000000;
-
-        // Construir URL
-        let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
-        
-        if (category !== 'all') url += `&category=${category}`;
-        if (maxPrice) url += `&maxPrice=${maxPrice}`;
-        
-        if (searchText.length === 1) url += `&initial=${searchText}`; 
-        else if (searchText.length > 1) url += `&search=${searchText}`; 
-
-        const res = await fetch(url);
-        
-        if (!res.ok) throw new Error("Error en servidor");
-        
-        const newProducts = await res.json();
-
-        if(loader) loader.style.display = 'none';
-
-        // Caso: Sin resultados
-        if (newProducts.length === 0 && currentPage === 0) {
-            if(container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos.</h3></div>';
-            if(loadMoreBtn) loadMoreBtn.style.display = 'none';
-            return;
-        }
-
-        // Guardar en memoria global
-        if (reset) {
-            allProducts = newProducts;
-        } else {
-            allProducts = [...allProducts, ...newProducts];
-        }
-
-        renderProducts(newProducts);
-
-        // Controlar botón "Cargar Más"
-        if (loadMoreBtn) {
-            loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
-        }
-
-    } catch (e) {
-        console.error(e);
-        if(loader) {
-            loader.style.display = 'none';
-            if(container) container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
-        }
-    }
-}
-
-function renderProducts(products) {
-    const container = document.getElementById('products-container');
-    if(!container) return;
-
-    const html = products.map(p => {
-        const isOut = p.stock <= 0;
-        const img = p.image_url || 'https://via.placeholder.com/400';
-        
-        let price = parseFloat(p.price);
-        let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
-
-        if (p.discount) { 
-            priceHtml = `
-                <div class="d-flex flex-column align-items-start">
-                    <span class="old-price small">$${parseFloat(p.base_price).toLocaleString()}</span>
-                    <span class="offer-price">$${price.toLocaleString()}</span>
-                </div>`;
-        }
-
-        const badge3D = p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-black border border-secondary text-white px-2">3D</div>' : '';
-        const overlay = isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : '';
-
-        return `
-        <div class="col-md-6 col-lg-4 mb-4 animate__animated animate__fadeIn">
-            <div class="card custom-card h-100 shadow product-card" onclick="openModal(${p.id})">
-                <div class="position-relative overflow-hidden" style="height: 250px;">
-                    <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
-                    <div class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">${p.category}</div>
-                    ${badge3D}
-                    ${overlay}
-                </div>
-                <div class="card-body bg-black text-white">
-                    <h5 class="fw-bold text-uppercase mb-1 text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
-                    <small class="text-silver mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
-                    <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
-                        ${priceHtml}
-                        <button class="btn btn-outline-danger btn-sm rounded-circle p-2" 
-                                onclick="event.stopPropagation(); addToCart(${p.id})" 
-                                ${isOut ? 'disabled' : ''}>
-                            <i class="fa-solid fa-cart-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    container.insertAdjacentHTML('beforeend', html);
-}
-
-// ==========================================
-// 3. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
-// ==========================================
-
+// ABRIR CARRITO (CONECTADO A BASE DE DATOS)
 window.openPaymentModal = async function() {
     console.log("Abriendo carrito...");
     const token = localStorage.getItem('token');
     
+    // Si no está logueado
     if (!token) {
         const loginModalEl = document.getElementById('loginRequiredModal');
         if(loginModalEl && window.bootstrap) {
@@ -247,6 +75,7 @@ window.openPaymentModal = async function() {
         return;
     }
     
+    // Obtener datos reales del servidor
     try {
         const res = await fetch(`${API_URL}/store/cart`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -259,6 +88,7 @@ window.openPaymentModal = async function() {
         
         const data = await res.json();
         
+        // Variables globales para el PDF
         window.currentCartItems = data.items;
         window.currentCartTotal = data.total;
 
@@ -275,13 +105,13 @@ window.openPaymentModal = async function() {
                         <span class="fw-bold text-white me-2">${item.quantity}x</span> 
                         <span class="text-light">${item.name}</span>
                     </div>
-                    <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toLocaleString()}</span>
+                    <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
                 </div>`).join('');
             }
         }
         
         if (totalEl) {
-            totalEl.innerText = `$${parseFloat(data.total).toLocaleString()}`;
+            totalEl.innerText = `$${parseFloat(data.total).toFixed(2)}`;
         }
         
         const modalEl = document.getElementById('paymentModal');
@@ -295,6 +125,7 @@ window.openPaymentModal = async function() {
     }
 };
 
+// AÑADIR AL CARRITO (RESERVA REAL)
 window.addToCart = async function(id) {
     const token = localStorage.getItem('token');
     
@@ -329,6 +160,45 @@ window.addToCart = async function(id) {
     }
 };
 
+// CHECKOUT (PAGO Y PDF)
+window.checkout = async function() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    if (!confirm("¿Confirmar compra y procesar factura?")) return;
+
+    try {
+        const res = await fetch(`${API_URL}/store/checkout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            if (typeof generatePDF === 'function') {
+                generatePDF(window.currentCartItems, data.total, data.orderId);
+            }
+            
+            alert("¡COMPRA EXITOSA! El auto es legalmente tuyo.");
+            updateCartUI();
+            
+            // Cerrar modal y recargar para ver stock actualizado
+            const modalEl = document.getElementById('paymentModal');
+            if (modalEl && window.bootstrap) {
+                bootstrap.Modal.getInstance(modalEl).hide();
+            }
+            loadCatalog(true); 
+        } else {
+            alert(`❌ Error: ${data.message}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error procesando la transacción.");
+    }
+};
+
+// MODAL DE DETALLE
 window.openModal = function(id) {
     const p = allProducts.find(x => x.id === id);
     if (!p) return;
@@ -383,48 +253,12 @@ window.openModal = function(id) {
         }
     }
     
+    // Cargar reseñas
     loadReviews(id);
     
     const modalEl = document.getElementById('productModal');
     if (modalEl && window.bootstrap) {
         new bootstrap.Modal(modalEl).show();
-    }
-};
-
-window.checkout = async function() {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    if (!confirm("¿Confirmar compra y procesar factura?")) return;
-
-    try {
-        const res = await fetch(`${API_URL}/store/checkout`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            if (typeof generatePDF === 'function') {
-                generatePDF(window.currentCartItems, data.total, data.orderId);
-            }
-            
-            alert("¡COMPRA EXITOSA! El auto es legalmente tuyo.");
-            updateCartUI();
-            
-            const modalEl = document.getElementById('paymentModal');
-            if (modalEl && window.bootstrap) {
-                bootstrap.Modal.getInstance(modalEl).hide();
-            }
-            
-            loadCatalog(true); // Actualizar stock visual
-        } else {
-            alert(`❌ Error: ${data.message}`);
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Error procesando la transacción.");
     }
 };
 
@@ -434,7 +268,189 @@ window.logout = function() {
 };
 
 // ==========================================
-// 4. UTILIDADES
+// 3. CATÁLOGO INTELIGENTE
+// ==========================================
+
+function setupStoreListeners() {
+    // Filtros Categoría
+    document.querySelectorAll('#category-filters button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            loadCatalog(true); // Resetear y cargar nueva categoría
+        });
+    });
+
+    // Buscador (Debounce para no saturar)
+    const sInput = document.getElementById('search-input');
+    let timeout = null;
+    if(sInput) {
+        sInput.addEventListener('input', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => loadCatalog(true), 500);
+        });
+    }
+
+    // Filtro Precio
+    const pRange = document.getElementById('price-range');
+    const pVal = document.getElementById('price-val');
+    if(pRange) {
+        pRange.addEventListener('input', (e) => {
+            if(pVal) pVal.innerText = `$${parseInt(e.target.value).toLocaleString()}`;
+        });
+        pRange.addEventListener('change', () => loadCatalog(true)); // Cargar al soltar
+    }
+
+    // Botón Cargar Más (Creación dinámica si no existe en HTML)
+    if(!document.getElementById('load-more-btn')) {
+        const moreBtn = document.createElement('button');
+        moreBtn.id = 'load-more-btn';
+        moreBtn.className = 'btn btn-outline-light d-block mx-auto mt-4 mb-5';
+        moreBtn.innerText = 'CARGAR MÁS MODELOS';
+        moreBtn.style.display = 'none';
+        moreBtn.onclick = () => {
+            currentPage++;
+            loadCatalog(false); // No resetear, añadir al final
+        };
+        const container = document.getElementById('products-container');
+        if(container && container.parentNode) {
+            container.parentNode.appendChild(moreBtn);
+        }
+    } else {
+        // Si ya existe (lo pusimos en el HTML), le damos funcionalidad
+        const moreBtn = document.getElementById('load-more-btn');
+        moreBtn.onclick = () => {
+            currentPage++;
+            loadCatalog(false);
+        };
+    }
+}
+
+// FUNCIÓN MAESTRA DE CARGA
+async function loadCatalog(reset = false) {
+    const container = document.getElementById('products-container');
+    const loader = document.getElementById('loader');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+
+    if (reset) {
+        currentPage = 0;
+        if(container) container.innerHTML = '';
+        allProducts = []; // Limpiar memoria para nueva búsqueda
+        if(container) container.classList.remove('d-none'); // Asegurar visible
+    }
+
+    if(loader) loader.style.display = 'block';
+
+    try {
+        // Recoger filtros
+        const activeCat = document.querySelector('#category-filters button.active');
+        const category = activeCat ? activeCat.dataset.filter : 'all';
+        const searchText = document.getElementById('search-input')?.value || '';
+        const maxPrice = document.getElementById('price-range')?.value || 1000000;
+
+        // Construir URL con parámetros
+        let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
+        
+        if (category !== 'all') url += `&category=${category}`;
+        if (maxPrice) url += `&maxPrice=${maxPrice}`;
+        
+        // Lógica Inicial vs Búsqueda completa
+        if (searchText.length === 1) {
+            url += `&initial=${searchText}`; // Busca por letra inicial (Ej: C -> Chevrolet)
+        } else if (searchText.length > 1) {
+            url += `&search=${searchText}`; // Busca coincidencia completa
+        }
+
+        const res = await fetch(url);
+        
+        if (!res.ok) throw new Error("Error en servidor");
+        
+        const newProducts = await res.json();
+
+        if(loader) loader.style.display = 'none';
+
+        if (newProducts.length === 0 && currentPage === 0) {
+            if(container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
+            if(loadMoreBtn) loadMoreBtn.style.display = 'none';
+            return;
+        }
+
+        // IMPORTANTE: Guardar en memoria global para que los modales funcionen
+        if (reset) {
+            allProducts = newProducts;
+        } else {
+            allProducts = [...allProducts, ...newProducts];
+        }
+
+        renderProducts(newProducts);
+
+        // Controlar botón "Cargar Más"
+        if (loadMoreBtn) {
+            loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
+        }
+
+    } catch (e) {
+        console.error(e);
+        if(loader) {
+            loader.style.display = 'none';
+            if(container) container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
+        }
+    }
+}
+
+function renderProducts(products) {
+    const container = document.getElementById('products-container');
+    if(!container) return;
+
+    const html = products.map(p => {
+        const isOut = p.stock <= 0;
+        const img = p.image_url || 'https://via.placeholder.com/400';
+        
+        // Manejo de Precio (Normal vs Oferta)
+        let price = parseFloat(p.price);
+        let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
+
+        if (p.discount) { 
+            priceHtml = `
+                <div class="d-flex flex-column align-items-start">
+                    <span class="old-price small">$${parseFloat(p.base_price).toLocaleString()}</span>
+                    <span class="offer-price">$${price.toLocaleString()}</span>
+                </div>`;
+        }
+
+        const badge3D = p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-black border border-secondary text-white px-2">3D</div>' : '';
+        const overlay = isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : '';
+
+        return `
+        <div class="col-md-6 col-lg-4 mb-4 animate__animated animate__fadeIn">
+            <div class="card custom-card h-100 shadow product-card" onclick="openModal(${p.id})">
+                <div class="position-relative overflow-hidden" style="height: 250px;">
+                    <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
+                    <div class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">${p.category}</div>
+                    ${badge3D}
+                    ${overlay}
+                </div>
+                <div class="card-body bg-black text-white">
+                    <h5 class="fw-bold text-uppercase mb-1 text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
+                    <small class="text-silver mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
+                    <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
+                        ${priceHtml}
+                        <button class="btn btn-outline-danger btn-sm rounded-circle p-2" 
+                                onclick="event.stopPropagation(); addToCart(${p.id})" 
+                                ${isOut ? 'disabled' : ''}>
+                            <i class="fa-solid fa-cart-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+// ==========================================
+// 4. UTILIDADES (PDF, AUTH, ETC)
 // ==========================================
 
 async function updateCartUI() {
@@ -470,6 +486,7 @@ function checkAuthStatus() {
         const crown = document.getElementById('admin-crown');
         
         if (div && u) {
+            // Mostrar corona si es admin
             if (crown && u.email === ADMIN_EMAIL) {
                 crown.style.display = 'block';
             }
@@ -505,15 +522,14 @@ function generatePDF(items, total, orderId) {
     doc.setFont(undefined, 'bold');
     doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, y+20);
     
-    doc.save(`Factura_${orderId}.pdf`);
+    doc.save(`Factura_${id}.pdf`);
 }
 
 function startCountdown() {
     let t = 600;
-    const interval = setInterval(() => {
+    setInterval(() => {
         if (t <= 0) {
             if (!isOfferActive) activateNightSale();
-            clearInterval(interval);
             return;
         }
         t--;
@@ -548,11 +564,9 @@ function initChatbot() {
     if(!t) return;
     t.onclick = () => { w.style.display = 'flex'; t.style.display = 'none'; };
     c.onclick = () => { w.style.display = 'none'; t.style.display = 'flex'; };
-
     const send = () => {
         if (!i.value.trim()) return;
-        const msg = i.value;
-        b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${msg}</span></div>`;
+        b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${i.value}</span></div>`;
         i.value = '';
         b.scrollTop = b.scrollHeight;
         setTimeout(() => {
@@ -560,7 +574,6 @@ function initChatbot() {
             b.scrollTop = b.scrollHeight;
         }, 1000);
     };
-
     if(s) s.onclick = send;
     if(i) i.onkeypress = (e) => { if (e.key === 'Enter') send(); };
 }
@@ -581,7 +594,6 @@ function initStrictRegister() {
         f.addEventListener('submit', async e => {
             e.preventDefault();
             const pass = document.getElementById('reg-pass').value;
-            const msg = document.getElementById('global-msg') || document.createElement('div');
             if (pass.length < 8) return alert("Contraseña insegura (min 8 chars)");
             
             try {
@@ -634,10 +646,13 @@ function initLogin() {
     }
 }
 
+// ==========================
+// 5. RESEÑAS EN TIEMPO REAL
+// ==========================
 async function loadReviews(pid) {
     const c = document.getElementById('reviewsContainer');
     if (c) {
-        c.innerHTML = '<small class="text-muted">Cargando...</small>';
+        c.innerHTML = '<small class="text-muted">Cargando...</small>'; // Feedback de carga
         try {
             const res = await fetch(`${API_URL}/products/${pid}/reviews`);
             const d = await res.json();
@@ -651,26 +666,45 @@ async function loadReviews(pid) {
                     </div>
                 `).join('');
             }
-        } catch (e) { c.innerHTML = '<small class="text-danger">Error cargando.</small>'; }
+        } catch (e) { 
+            c.innerHTML = '<small class="text-danger">Error cargando reseñas.</small>'; 
+        }
     }
 }
 
 async function handleReviewSubmit(e) {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    if (!token) return alert("Inicia sesión.");
+    
+    if (!token) return alert("Inicia sesión para comentar.");
     
     const txtInput = document.getElementById('review-comment');
     const txt = txtInput.value.trim();
-    if (!txt) return alert("Escribe algo.");
+    if (!txt) return alert("Escribe un comentario.");
 
-    await fetch(`${API_URL}/reviews`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ productId: currentProductModalId, rating: 5, comment: txt })
-    });
-    
-    // Recargar reseñas inmediatamente
-    loadReviews(currentProductModalId);
-    txtInput.value = ''; 
+    try {
+        const res = await fetch(`${API_URL}/reviews`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ 
+                productId: currentProductModalId, 
+                rating: 5, 
+                comment: txt 
+            })
+        });
+
+        if(res.ok) {
+            // Recargar reseñas inmediatamente para que aparezca la nueva
+            loadReviews(currentProductModalId);
+            txtInput.value = ''; // Limpiar campo
+        } else {
+            alert("Error al publicar reseña.");
+        }
+    } catch(err) {
+        console.error(err);
+        alert("Error de conexión.");
+    }
 }
