@@ -1,12 +1,12 @@
 /**
  * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V3)
- * Corrección: Visibilidad del Catálogo y Depuración
+ * Fase 1: Stock Real, Paginación, 3D y Validaciones Bancarias
  */
 
-console.log("🚀 Script de SpeedCollect cargando...");
+console.log("🚀 SpeedCollect System Online");
 
 const API_URL = '/api'; 
-let allProducts = []; 
+let allProducts = []; // Memoria global de productos cargados
 let currentProductModalId = null;
 let itiInstance = null; 
 let isOfferActive = false;
@@ -20,7 +20,220 @@ const ADMIN_EMAIL = "jsusgamep@itc.edu.co";
 const DISCOUNT_RATE = 0.20; 
 
 // ==========================================
-// 1. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
+// 1. INICIALIZACIÓN (DOM READY)
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // 1. Auth & UI Base
+    checkAuthStatus();
+    updateCartUI(); // Sincroniza bolita roja con DB
+    initChatbot(); 
+
+    // 2. Detectar página y cargar módulos
+    const storeContainer = document.getElementById('products-container');
+    const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
+    const reviewForm = document.getElementById('reviewForm');
+    const countdownEl = document.getElementById('seconds');
+
+    // Lógica de Tienda (Catálogo)
+    if (storeContainer) { 
+        setupStoreListeners();
+        loadCatalog(true); // Carga inicial (Reset = true)
+        if(countdownEl) startCountdown(); 
+    }
+    
+    // Formularios
+    if (registerForm) initStrictRegister();
+    if (loginForm) initLogin();
+    
+    // Reseñas
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', handleReviewSubmit);
+    }
+});
+
+// ==========================================
+// 2. CATÁLOGO INTELIGENTE (Paginación y Filtros)
+// ==========================================
+
+function setupStoreListeners() {
+    // Filtros Categoría
+    document.querySelectorAll('#category-filters button').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            loadCatalog(true); // Resetear y cargar nueva categoría
+        });
+    });
+
+    // Buscador (Debounce para no saturar)
+    const sInput = document.getElementById('search-input');
+    let timeout = null;
+    if(sInput) {
+        sInput.addEventListener('input', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => loadCatalog(true), 500);
+        });
+    }
+
+    // Filtro Precio
+    const pRange = document.getElementById('price-range');
+    const pVal = document.getElementById('price-val');
+    if(pRange) {
+        pRange.addEventListener('input', (e) => {
+            if(pVal) pVal.innerText = `$${parseInt(e.target.value).toLocaleString()}`;
+        });
+        pRange.addEventListener('change', () => loadCatalog(true)); // Cargar al soltar
+    }
+
+    // Botón Cargar Más (Creación dinámica si no existe en HTML)
+    if(!document.getElementById('load-more-btn')) {
+        const moreBtn = document.createElement('button');
+        moreBtn.id = 'load-more-btn';
+        moreBtn.className = 'btn btn-outline-light d-block mx-auto mt-4 mb-5';
+        moreBtn.innerText = 'CARGAR MÁS MODELOS';
+        moreBtn.style.display = 'none';
+        moreBtn.onclick = () => {
+            currentPage++;
+            loadCatalog(false); // No resetear, añadir al final
+        };
+        const container = document.getElementById('products-container');
+        if(container && container.parentNode) {
+            container.parentNode.appendChild(moreBtn);
+        }
+    } else {
+        // Si ya existe (lo pusimos en el HTML), le damos funcionalidad
+        const moreBtn = document.getElementById('load-more-btn');
+        moreBtn.onclick = () => {
+            currentPage++;
+            loadCatalog(false);
+        };
+    }
+}
+
+// FUNCIÓN MAESTRA DE CARGA
+async function loadCatalog(reset = false) {
+    const container = document.getElementById('products-container');
+    const loader = document.getElementById('loader');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+
+    if (reset) {
+        currentPage = 0;
+        if(container) container.innerHTML = '';
+        allProducts = []; // Limpiar memoria para nueva búsqueda
+        if(container) container.classList.remove('d-none'); // Asegurar visible
+    }
+
+    if(loader) loader.style.display = 'block';
+
+    try {
+        // Recoger filtros
+        const activeCat = document.querySelector('#category-filters button.active');
+        const category = activeCat ? activeCat.dataset.filter : 'all';
+        const searchText = document.getElementById('search-input')?.value || '';
+        const maxPrice = document.getElementById('price-range')?.value || 1000000;
+
+        // Construir URL con parámetros
+        let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
+        
+        if (category !== 'all') url += `&category=${category}`;
+        if (maxPrice) url += `&maxPrice=${maxPrice}`;
+        
+        // Lógica Inicial vs Búsqueda completa
+        if (searchText.length === 1) {
+            url += `&initial=${searchText}`; // Busca por letra inicial (Ej: C -> Chevrolet)
+        } else if (searchText.length > 1) {
+            url += `&search=${searchText}`; // Busca coincidencia completa
+        }
+
+        const res = await fetch(url);
+        
+        if (!res.ok) throw new Error("Error en servidor");
+        
+        const newProducts = await res.json();
+
+        if(loader) loader.style.display = 'none';
+
+        if (newProducts.length === 0 && currentPage === 0) {
+            if(container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
+            if(loadMoreBtn) loadMoreBtn.style.display = 'none';
+            return;
+        }
+
+        // IMPORTANTE: Guardar en memoria global para que los modales funcionen
+        if (reset) {
+            allProducts = newProducts;
+        } else {
+            allProducts = [...allProducts, ...newProducts];
+        }
+
+        renderProducts(newProducts);
+
+        // Controlar botón "Cargar Más"
+        if (loadMoreBtn) {
+            loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
+        }
+
+    } catch (e) {
+        console.error(e);
+        if(loader) {
+            loader.style.display = 'none';
+            if(container) container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
+        }
+    }
+}
+
+function renderProducts(products) {
+    const container = document.getElementById('products-container');
+    if(!container) return;
+    
+    const html = products.map(p => {
+        const isOut = p.stock <= 0;
+        const img = p.image_url || 'https://via.placeholder.com/400';
+        
+        // Manejo de Precio (Normal vs Oferta)
+        let price = parseFloat(p.price);
+        let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
+
+        if (p.discount) { // Viene del backend si hay venta nocturna activa
+            priceHtml = `
+                <div class="d-flex flex-column align-items-start">
+                    <span class="old-price small">$${parseFloat(p.base_price).toLocaleString()}</span>
+                    <span class="offer-price">$${price.toLocaleString()}</span>
+                </div>`;
+        }
+
+        return `
+        <div class="col-md-6 col-lg-4 mb-4 animate__animated animate__fadeIn">
+            <div class="card custom-card h-100 shadow product-card" onclick="openModal(${p.id})">
+                <div class="position-relative overflow-hidden" style="height: 250px;">
+                    <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
+                    <div class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">${p.category}</div>
+                    ${p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-white"><i class="fa-solid fa-cube"></i> 3D</div>' : ''}
+                    ${isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : ''}
+                </div>
+                <div class="card-body d-flex flex-column bg-black text-white">
+                    <h5 class="fw-bold text-uppercase mb-1 text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
+                    <small class="text-silver mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
+                    <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
+                        ${priceHtml}
+                        <button class="btn btn-outline-danger btn-sm rounded-circle p-2" 
+                                onclick="event.stopPropagation(); addToCart(${p.id})" 
+                                ${isOut ? 'disabled' : ''}>
+                            <i class="fa-solid fa-cart-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+// ==========================================
+// 3. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
 // ==========================================
 
 window.openPaymentModal = async function() {
@@ -44,7 +257,10 @@ window.openPaymentModal = async function() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!res.ok) throw new Error("Error al obtener carrito");
+        if (!res.ok) {
+            if(res.status === 401) { window.logout(); return; }
+            throw new Error("Error al obtener carrito");
+        }
         
         const data = await res.json();
         
@@ -65,13 +281,13 @@ window.openPaymentModal = async function() {
                         <span class="fw-bold text-white me-2">${item.quantity}x</span> 
                         <span class="text-light">${item.name}</span>
                     </div>
-                    <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                    <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toLocaleString()}</span>
                 </div>`).join('');
             }
         }
         
         if (totalEl) {
-            totalEl.innerText = `$${parseFloat(data.total).toFixed(2)}`;
+            totalEl.innerText = `$${parseFloat(data.total).toLocaleString()}`;
         }
         
         const modalEl = document.getElementById('paymentModal');
@@ -151,6 +367,7 @@ window.openModal = function(id) {
     // 3D o Imagen
     const visualContainer = document.getElementById('visual-container');
     if (visualContainer) {
+        // Prioridad: Archivo GLB
         if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf'))) {
             visualContainer.innerHTML = `
                 <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
@@ -225,209 +442,7 @@ window.logout = function() {
 };
 
 // ==========================================
-// 2. INICIALIZACIÓN (DOM READY)
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuthStatus();
-    updateCartUI(); 
-    initChatbot(); 
-
-    const storeContainer = document.getElementById('products-container');
-    const registerForm = document.getElementById('register-form');
-    const loginForm = document.getElementById('login-form');
-    const reviewForm = document.getElementById('reviewForm');
-    const countdownEl = document.getElementById('seconds');
-
-    if (storeContainer) { 
-        setupStoreListeners();
-        loadCatalog(true); 
-        if(countdownEl) startCountdown(); 
-    }
-    
-    if (registerForm) initStrictRegister();
-    if (loginForm) initLogin();
-    
-    if (reviewForm) {
-        reviewForm.addEventListener('submit', handleReviewSubmit);
-    }
-});
-
-// ==========================================
-// 3. LÓGICA DE CATÁLOGO
-// ==========================================
-
-function setupStoreListeners() {
-    document.querySelectorAll('#category-filters button').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            loadCatalog(true); 
-        });
-    });
-
-    const sInput = document.getElementById('search-input');
-    let timeout = null;
-    if (sInput) {
-        sInput.addEventListener('input', () => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => loadCatalog(true), 500);
-        });
-    }
-
-    const pRange = document.getElementById('price-range');
-    const pVal = document.getElementById('price-val');
-    if (pRange) {
-        pRange.addEventListener('input', (e) => {
-            if (pVal) pVal.innerText = `$${parseInt(e.target.value).toLocaleString()}`;
-        });
-        pRange.addEventListener('change', () => loadCatalog(true));
-    }
-
-    // Crear botón Cargar Más si no existe
-    if (!document.getElementById('load-more-btn') && document.getElementById('products-container')) {
-        const moreBtn = document.createElement('button');
-        moreBtn.id = 'load-more-btn';
-        moreBtn.className = 'btn btn-outline-light d-block mx-auto mt-4 mb-5';
-        moreBtn.innerText = 'CARGAR MÁS MODELOS';
-        moreBtn.style.display = 'none';
-        moreBtn.onclick = () => {
-            currentPage++;
-            loadCatalog(false); 
-        };
-        const container = document.getElementById('products-container');
-        if (container && container.parentNode) {
-            container.parentNode.appendChild(moreBtn);
-        }
-    }
-}
-
-async function loadCatalog(reset = false) {
-    const container = document.getElementById('products-container');
-    const loader = document.getElementById('loader');
-    const loadMoreBtn = document.getElementById('load-more-btn');
-
-    if (reset) {
-        currentPage = 0;
-        if (container) container.innerHTML = '';
-        allProducts = []; 
-    }
-
-    if (loader) loader.style.display = 'block';
-
-    try {
-        const activeCat = document.querySelector('#category-filters button.active');
-        const category = activeCat ? activeCat.dataset.filter : 'all';
-        const searchText = document.getElementById('search-input')?.value || '';
-        const maxPrice = document.getElementById('price-range')?.value || 1000000;
-
-        let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
-        
-        if (category !== 'all') url += `&category=${category}`;
-        if (maxPrice) url += `&maxPrice=${maxPrice}`;
-        
-        if (searchText.length === 1) {
-            url += `&initial=${searchText}`; 
-        } else if (searchText.length > 1) {
-            url += `&search=${searchText}`; 
-        }
-
-        console.log("Fetching catalog:", url); // Debug
-
-        const res = await fetch(url);
-        
-        if (!res.ok) throw new Error("Error en servidor: " + res.status);
-        
-        const newProducts = await res.json();
-
-        if (loader) loader.style.display = 'none';
-        
-        // CORRECCIÓN IMPORTANTE: HACER VISIBLE EL CONTENEDOR
-        if (container) container.classList.remove('d-none');
-
-        if (newProducts.length === 0 && currentPage === 0) {
-            if (container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos en el radar.</h3></div>';
-            if (loadMoreBtn) loadMoreBtn.style.display = 'none';
-            return;
-        }
-
-        if (reset) {
-            allProducts = newProducts;
-        } else {
-            allProducts = [...allProducts, ...newProducts];
-        }
-
-        renderProducts(newProducts);
-
-        if (loadMoreBtn) {
-            loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
-        }
-
-    } catch (e) {
-        console.error("Error loadCatalog:", e);
-        if (loader) {
-            loader.style.display = 'none';
-            if (container) {
-                container.classList.remove('d-none'); // Asegurar que se vea el error
-                container.innerHTML = '<p class="text-danger text-center">Error de conexión. Intenta recargar.</p>';
-            }
-        }
-    }
-}
-
-function renderProducts(products) {
-    const container = document.getElementById('products-container');
-    if (!container) return;
-    
-    const html = products.map(p => {
-        const isOut = p.stock <= 0;
-        const img = p.image_url || 'https://via.placeholder.com/400';
-        
-        let price = parseFloat(p.price);
-        let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
-
-        if (p.discount) { 
-            priceHtml = `
-                <div class="d-flex flex-column align-items-start">
-                    <span class="old-price small">$${parseFloat(p.base_price).toLocaleString()}</span>
-                    <span class="offer-price">$${price.toLocaleString()}</span>
-                </div>`;
-        }
-
-        const badge3D = p.model_url ? 
-            '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-white"><i class="fa-solid fa-cube"></i> 3D</div>' : '';
-        const overlaySold = isOut ? 
-            '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : '';
-
-        return `
-        <div class="col-md-6 col-lg-4 mb-4 animate__animated animate__fadeIn">
-            <div class="card custom-card h-100 shadow product-card" onclick="openModal(${p.id})">
-                <div class="position-relative overflow-hidden" style="height: 250px;">
-                    <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
-                    <div class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">${p.category}</div>
-                    ${badge3D}
-                    ${overlaySold}
-                </div>
-                <div class="card-body d-flex flex-column bg-black text-white">
-                    <h5 class="fw-bold text-uppercase mb-1 text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
-                    <small class="text-silver mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
-                    <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
-                        ${priceHtml}
-                        <button class="btn btn-outline-danger btn-sm rounded-circle p-2" 
-                                onclick="event.stopPropagation(); addToCart(${p.id})" 
-                                ${isOut ? 'disabled' : ''}>
-                            <i class="fa-solid fa-cart-plus"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    container.insertAdjacentHTML('beforeend', html);
-}
-
-// ==========================================
-// 4. AUTH & UTILIDADES
+// 4. UTILIDADES Y AUTH
 // ==========================================
 
 async function updateCartUI() {
@@ -463,9 +478,11 @@ function checkAuthStatus() {
         const crown = document.getElementById('admin-crown');
         
         if (div && u) {
+            // Mostrar corona si es admin
             if (crown && u.email === ADMIN_EMAIL) {
                 crown.style.display = 'block';
             }
+            
             div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold border-0">SALIR</button>`;
         }
     } catch (e) {}
@@ -491,16 +508,15 @@ function generatePDF(items, total, orderId) {
     const body = items.map(i => [i.quantity, i.name, `$${parseFloat(i.price).toLocaleString()}`, `$${(i.price * i.quantity).toLocaleString()}`]);
     doc.autoTable({ startY: 80, head: [['Cant', 'Auto', 'Unit', 'Total']], body: body });
     
-    let finalY = doc.lastAutoTable.finalY + 10;
-    doc.text(`Subtotal: $${subtotal.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY);
-    doc.text(`IVA (19%): $${iva.toLocaleString(undefined, {maximumFractionDigits:2})}`, 130, finalY + 10);
+    let y = doc.lastAutoTable.finalY + 10;
+    doc.text(`Subtotal: $${subtotal.toLocaleString(undefined,{maximumFractionDigits:2})}`, 130, y);
+    doc.text(`IVA (19%): $${iva.toLocaleString(undefined,{maximumFractionDigits:2})}`, 130, y+10);
     doc.setFont(undefined, 'bold');
-    doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, finalY + 20);
+    doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, y+20);
     
     doc.save(`Factura_${orderId}.pdf`);
 }
 
-// VENTA NOCTURNA
 function startCountdown() {
     let t = 600;
     const interval = setInterval(() => {
@@ -533,12 +549,9 @@ async function activateNightSale() {
         });
         alert("🌙 VENTA NOCTURNA: ¡Precios actualizados!");
         loadCatalog(true);
-        const offers = document.getElementById('offers');
-        if(offers) offers.style.border = "2px solid #00ff00";
     } catch(e) {}
 }
 
-// CHATBOT
 function initChatbot() { 
     const t = document.getElementById('chatTrigger');
     const w = document.getElementById('chatWidget');
@@ -569,7 +582,6 @@ function initChatbot() {
     if(i) i.onkeypress = (e) => { if (e.key === 'Enter') send(); };
 }
 
-// LOGIN & REGISTER
 function initStrictRegister() {
     const f = document.getElementById('register-form');
     const pInput = document.getElementById('reg-phone');
@@ -639,7 +651,6 @@ function initLogin() {
     }
 }
 
-// RESEÑAS
 async function loadReviews(pid) {
     const c = document.getElementById('reviewsContainer');
     if (c) {
