@@ -1,12 +1,12 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V6 - UNLOCKED 3D)
- * Corrección: Visor 3D con movimiento libre 360° y Catálogo robusto.
+ * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V6)
+ * Solución: Catálogo Paginado, Stock Real, PDF IVA.
  */
 
-console.log("✅ Script Cargado y Listo.");
+console.log("✅ Script Cargado Correctamente.");
 
 const API_URL = '/api'; 
-let allProducts = []; // Memoria global de productos
+let allProducts = []; 
 let currentProductModalId = null;
 let itiInstance = null; 
 let isOfferActive = false;
@@ -20,54 +20,48 @@ const ADMIN_EMAIL = "jsusgamep@itc.edu.co";
 const DISCOUNT_RATE = 0.20; 
 
 // ==========================================
-// 1. INICIALIZACIÓN
+// 1. INICIALIZACIÓN (DOM READY)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    
-    // Auth & UI
     checkAuthStatus();
-    updateCartUI(); 
+    updateCartUI(); // Sincroniza bolita roja con DB
     initChatbot(); 
 
-    // Detectar elementos
     const storeContainer = document.getElementById('products-container');
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
     const reviewForm = document.getElementById('reviewForm');
     const countdownEl = document.getElementById('seconds');
 
-    // Cargar Catálogo
     if (storeContainer) { 
         setupStoreListeners();
         loadCatalog(true); // Carga inicial
         if(countdownEl) startCountdown(); 
     }
     
-    // Forms
     if (registerForm) initStrictRegister();
     if (loginForm) initLogin();
     
-    // Reviews
     if (reviewForm) {
         reviewForm.addEventListener('submit', handleReviewSubmit);
     }
 });
 
 // ==========================================
-// 2. CATÁLOGO & FILTROS
+// 2. CATÁLOGO INTELIGENTE
 // ==========================================
 
 function setupStoreListeners() {
-    // Botones Categoría
+    // Filtros
     document.querySelectorAll('#category-filters button').forEach(btn => {
         btn.addEventListener('click', (e) => {
             document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
             e.target.classList.add('active');
-            loadCatalog(true); // Resetear al cambiar filtro
+            loadCatalog(true);
         });
     });
 
-    // Buscador Texto
+    // Buscador
     const sInput = document.getElementById('search-input');
     let timeout = null;
     if(sInput) {
@@ -77,7 +71,7 @@ function setupStoreListeners() {
         });
     }
 
-    // Slider Precio
+    // Filtro Precio
     const pRange = document.getElementById('price-range');
     const pVal = document.getElementById('price-val');
     if(pRange) {
@@ -87,7 +81,7 @@ function setupStoreListeners() {
         pRange.addEventListener('change', () => loadCatalog(true));
     }
 
-    // Botón Cargar Más (Si no existe en HTML, lo creamos)
+    // Botón Cargar Más (Creación si no existe)
     if(!document.getElementById('load-more-btn')) {
         const moreBtn = document.createElement('button');
         moreBtn.id = 'load-more-btn';
@@ -96,7 +90,7 @@ function setupStoreListeners() {
         moreBtn.style.display = 'none';
         moreBtn.onclick = () => {
             currentPage++;
-            loadCatalog(false); // No resetear, añadir abajo
+            loadCatalog(false);
         };
         const container = document.getElementById('products-container');
         if(container && container.parentNode) {
@@ -114,63 +108,52 @@ async function loadCatalog(reset = false) {
         currentPage = 0;
         if(container) {
             container.innerHTML = '';
-            container.classList.remove('d-none');
+            container.classList.remove('d-none'); // Asegurar visible
         }
-        allProducts = []; // Limpiar memoria
+        allProducts = [];
     }
 
     if(loader) loader.style.display = 'block';
 
     try {
-        // Obtener filtros activos
-        const activeCat = document.querySelector('#category-filters button.active');
-        const category = activeCat ? activeCat.dataset.filter : 'all';
-        const searchText = document.getElementById('search-input')?.value || '';
-        const maxPrice = document.getElementById('price-range')?.value || 1000000;
+        const cat = document.querySelector('#category-filters button.active')?.dataset.filter || 'all';
+        const txt = document.getElementById('search-input')?.value || '';
+        const prc = document.getElementById('price-range')?.value || 1000000;
 
-        // Construir URL
         let url = `${API_URL}/store/products?limit=${ITEMS_PER_PAGE}&offset=${currentPage * ITEMS_PER_PAGE}`;
         
-        if (category !== 'all') url += `&category=${category}`;
-        if (maxPrice) url += `&maxPrice=${maxPrice}`;
-        
-        if (searchText.length === 1) url += `&initial=${searchText}`; 
-        else if (searchText.length > 1) url += `&search=${searchText}`; 
+        if (category !== 'all') url += `&category=${cat}`;
+        if (prc) url += `&maxPrice=${prc}`;
+        if (txt.length === 1) url += `&initial=${txt}`;
+        else if (txt.length > 1) url += `&search=${txt}`;
 
         const res = await fetch(url);
-        if (!res.ok) throw new Error("Error API");
+        
+        if (!res.ok) throw new Error("Error en servidor");
         
         const newProducts = await res.json();
 
         if(loader) loader.style.display = 'none';
 
-        // Caso: Sin resultados
         if (newProducts.length === 0 && currentPage === 0) {
-            if(container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No hay autos con esos filtros.</h3></div>';
+            if(container) container.innerHTML = '<div class="col-12 text-center text-muted py-5"><h3>No se encontraron vehículos.</h3></div>';
             if(loadMoreBtn) loadMoreBtn.style.display = 'none';
             return;
         }
 
-        // Guardar en memoria global para Modales
-        if (reset) {
-            allProducts = newProducts;
-        } else {
-            allProducts = [...allProducts, ...newProducts];
-        }
+        // Guardar en memoria
+        if (reset) allProducts = newProducts;
+        else allProducts = [...allProducts, ...newProducts];
 
         renderProducts(newProducts);
 
-        // Mostrar botón si hay posibilidad de más items (si trajo 10, quizás hay más)
         if (loadMoreBtn) {
             loadMoreBtn.style.display = newProducts.length < ITEMS_PER_PAGE ? 'none' : 'block';
         }
 
     } catch (e) {
         console.error(e);
-        if(loader) {
-            loader.style.display = 'none';
-            if(container) container.innerHTML = '<p class="text-danger text-center py-5">Error de conexión. Intenta recargar.</p>';
-        }
+        if(loader) loader.style.display = 'none';
     }
 }
 
@@ -180,7 +163,7 @@ function renderProducts(products) {
 
     const html = products.map(p => {
         const isOut = p.stock <= 0;
-        const img = p.image_url || 'https://via.placeholder.com/400?text=No+Image';
+        const img = p.image_url || 'https://via.placeholder.com/400';
         
         let price = parseFloat(p.price);
         let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
@@ -193,7 +176,7 @@ function renderProducts(products) {
                 </div>`;
         }
 
-        const badge3D = p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-black border border-secondary">3D</div>' : '';
+        const badge3D = p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-white"><i class="fa-solid fa-cube"></i> 3D</div>' : '';
         const overlay = isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : '';
 
         return `
@@ -211,8 +194,8 @@ function renderProducts(products) {
                     <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
                         ${priceHtml}
                         <button class="btn btn-outline-danger btn-sm rounded-circle p-2" 
-                            onclick="event.stopPropagation(); addToCart(${p.id})" 
-                            ${isOut ? 'disabled' : ''}>
+                                onclick="event.stopPropagation(); addToCart(${p.id})" 
+                                ${isOut ? 'disabled' : ''}>
                             <i class="fa-solid fa-cart-plus"></i>
                         </button>
                     </div>
@@ -225,66 +208,11 @@ function renderProducts(products) {
 }
 
 // ==========================================
-// 3. MODAL DETALLE (3D DESBLOQUEADO)
-// ==========================================
-window.openModal = function(id) {
-    const p = allProducts.find(x => x.id === id);
-    if (!p) return;
-    
-    currentProductModalId = id;
-    
-    let price = parseFloat(p.price);
-    let htmlPrice = `<span class="text-danger fw-bold fs-2">$${price.toLocaleString()}</span>`;
-    if (p.discount) {
-        htmlPrice = `<div class="d-flex flex-column"><span class="text-decoration-line-through text-muted small">$${parseFloat(p.base_price).toLocaleString()}</span> <span class="text-success fw-bold fs-2">$${price.toLocaleString()}</span></div>`;
-    }
-
-    document.getElementById('modal-p-name').innerText = p.name;
-    document.getElementById('modal-p-desc').innerText = p.description;
-    document.getElementById('modal-p-price').innerHTML = htmlPrice;
-    
-    const stockEl = document.getElementById('modal-p-stock');
-    if(stockEl) stockEl.innerHTML = p.stock > 0 
-        ? `<span class="text-success">Disponible: ${p.stock}</span>` 
-        : '<span class="text-danger">Agotado</span>';
-
-    // Lógica Visual
-    const visual = document.getElementById('visual-container');
-    if(visual) {
-        // Detectar .glb, .gltf o links de Google/Sketchfab raw
-        if (p.model_url && (p.model_url.includes('.glb') || p.model_url.includes('.gltf'))) {
-            // VISOR 3D SIN RESTRICCIONES DE ROTACIÓN
-            visual.innerHTML = `
-                <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
-                    <model-viewer 
-                        src="${p.model_url}" 
-                        alt="${p.name}" 
-                        auto-rotate 
-                        camera-controls 
-                        ar
-                        shadow-intensity="1"
-                        style="width: 100%; height: 100%; background-color: #151515;"
-                    ></model-viewer>
-                    <div class="position-absolute bottom-0 w-100 text-center text-white-50 small py-1" style="background:rgba(0,0,0,0.6)">
-                        <i class="fa-solid fa-hand-pointer"></i> Toca y arrastra para rotar libremente
-                    </div>
-                </div>`;
-        } else {
-            visual.innerHTML = `<img src="${p.image_url}" class="img-fluid rounded w-100 shadow">`;
-        }
-    }
-    
-    loadReviews(id);
-    new bootstrap.Modal(document.getElementById('productModal')).show();
-};
-
-// ==========================================
-// 4. CARRITO Y PAGOS
+// 3. FUNCIONES GLOBALES
 // ==========================================
 
 window.addToCart = async function(id) {
     const token = localStorage.getItem('token');
-    
     if (!token) {
         if (confirm("🔒 Acceso Restringido.\nDebes iniciar sesión para reservar stock. ¿Ir al login?")) {
             window.location.href = 'login.html';
@@ -312,7 +240,7 @@ window.addToCart = async function(id) {
         }
     } catch (e) {
         console.error(e);
-        alert("Error de conexión con el servidor.");
+        alert("Error de conexión.");
     }
 };
 
@@ -322,7 +250,6 @@ window.openPaymentModal = async function() {
     
     try {
         const res = await fetch(`${API_URL}/store/cart`, { headers: { 'Authorization': `Bearer ${token}` } });
-        
         if(res.status === 401) { window.logout(); return; }
         
         const data = await res.json();
@@ -336,7 +263,7 @@ window.openPaymentModal = async function() {
             list.innerHTML = '<p class="text-center text-muted py-4">Tu garaje está vacío.</p>';
         } else {
             list.innerHTML = data.items.map(item => `
-            <div class="d-flex justify-content-between align-items-center mb-2 border-bottom border-secondary pb-2">
+            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
                 <div>
                     <span class="fw-bold text-white me-2">${item.quantity}x</span> 
                     <span class="text-light">${item.name}</span>
@@ -345,15 +272,18 @@ window.openPaymentModal = async function() {
             </div>`).join('');
         }
         
-        if(totalEl) totalEl.innerText = `$${parseFloat(data.total).toLocaleString()}`;
+        if (totalEl) {
+            totalEl.innerText = `$${parseFloat(data.total).toLocaleString()}`;
+        }
+        
         new bootstrap.Modal(document.getElementById('paymentModal')).show();
 
-    } catch (e) { alert("Error cargando carrito"); }
+    } catch (e) { alert("Error cargando carrito."); }
 };
 
 window.checkout = async function() {
     const token = localStorage.getItem('token');
-    if (!token || !confirm("¿Confirmar compra?")) return;
+    if (!token || !confirm("¿Confirmar compra y procesar factura?")) return;
 
     try {
         const res = await fetch(`${API_URL}/store/checkout`, {
@@ -369,45 +299,93 @@ window.checkout = async function() {
             }
             alert("¡COMPRA EXITOSA!");
             updateCartUI();
-            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-            loadCatalog(true); // Recargar para ver stock actualizado
+            const modal = bootstrap.Modal.getInstance(document.getElementById('paymentModal'));
+            if(modal) modal.hide();
+            loadCatalog(true);
         } else {
             alert(`❌ Error: ${data.message}`);
         }
     } catch (e) { alert("Error procesando pago."); }
 };
 
+window.openModal = function(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    currentProductModalId = id;
+    
+    let price = parseFloat(p.price);
+    let htmlPrice = `<span class="text-danger fw-bold fs-2">$${price.toLocaleString()}</span>`;
+    
+    if (p.discount) {
+        htmlPrice = `
+            <div class="d-flex flex-column">
+                <span class="text-decoration-line-through text-muted small">$${parseFloat(p.base_price).toLocaleString()}</span>
+                <span class="text-success fw-bold fs-2">$${price.toLocaleString()}</span>
+            </div>`;
+    }
+
+    document.getElementById('modal-p-name').innerText = p.name;
+    document.getElementById('modal-p-desc').innerText = p.description;
+    document.getElementById('modal-p-price').innerHTML = htmlPrice;
+    document.getElementById('modal-p-stock').innerHTML = p.stock > 0 
+        ? `<span class="text-success">Disponible: ${p.stock}</span>` 
+        : '<span class="text-danger">Agotado</span>';
+
+    const visual = document.getElementById('visual-container');
+    if (visual) {
+        if (p.model_url && (p.model_url.includes('.glb') || p.model_url.includes('.gltf'))) {
+            visual.innerHTML = `
+                <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
+                    <model-viewer 
+                        src="${p.model_url}" 
+                        alt="${p.name}" 
+                        auto-rotate 
+                        camera-controls 
+                        shadow-intensity="1"
+                        style="width: 100%; height: 100%; background-color: #151515;"
+                    ></model-viewer>
+                    <div class="position-absolute bottom-0 w-100 text-center text-white-50 small py-1">Rotar 360°</div>
+                </div>`;
+        } else {
+            visual.innerHTML = `<img src="${p.image_url}" class="img-fluid rounded w-100 shadow">`;
+        }
+    }
+    
+    if (typeof loadReviews === 'function') loadReviews(id);
+    new bootstrap.Modal(document.getElementById('productModal')).show();
+};
+
 // ==========================================
-// 5. UTILIDADES AUXILIARES
+// 4. UTILIDADES
 // ==========================================
 
 async function updateCartUI() {
     const token = localStorage.getItem('token');
     const el = document.getElementById('cart-count');
-    if (!el || !token) return;
-    
+    if (!el || !token) { if(el) el.style.display='none'; return; }
+
     try {
         const res = await fetch(`${API_URL}/store/cart`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (res.ok) {
             const data = await res.json();
-            const count = data.items.reduce((acc, item) => acc + item.quantity, 0);
+            const count = data.items ? data.items.reduce((acc, item) => acc + item.quantity, 0) : 0;
             el.innerText = count;
             el.style.display = count > 0 ? 'block' : 'none';
         }
-    } catch(e) {}
+    } catch (e) {}
 }
 
-function generatePDF(items, total, id) {
+function generatePDF(items, total, orderId) {
     if (!window.jspdf) return;
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     const user = JSON.parse(localStorage.getItem('user')) || { name: "Cliente" };
     
-    doc.setFillColor(10,10,10); doc.rect(0,0,210,40,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(22); doc.text("SPEEDCOLLECT", 15, 25);
+    doc.setFillColor(10, 10, 10); doc.rect(0, 0, 210, 40, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text("SPEEDCOLLECT RECIBO", 15, 25);
     
     doc.setTextColor(0,0,0); doc.setFontSize(12);
-    doc.text(`Factura #: ${id}`, 15, 50);
+    doc.text(`Orden #: ${orderId}`, 15, 50);
     doc.text(`Cliente: ${user.name}`, 15, 60);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 70);
     
@@ -422,42 +400,38 @@ function generatePDF(items, total, id) {
     doc.text(`IVA (19%): $${iva.toLocaleString(undefined,{maximumFractionDigits:2})}`, 130, y+10);
     doc.setFont(undefined, 'bold');
     doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, y+20);
-    doc.save(`Factura_${id}.pdf`);
+    doc.save(`Factura_${orderId}.pdf`);
 }
 
 function checkAuthStatus() {
-    const u = localStorage.getItem('user');
-    if (u) {
-        try {
-            const user = JSON.parse(u);
-            const div = document.getElementById('auth-section');
-            const crown = document.getElementById('admin-crown');
-            if (div) div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold">SALIR</button>`;
-            if (crown && user.email === ADMIN_EMAIL) crown.style.display = 'block';
-        } catch(e){}
-    }
+    const uStr = localStorage.getItem('user');
+    if (!uStr) return;
+    try {
+        const u = JSON.parse(uStr);
+        const div = document.getElementById('auth-section');
+        const crown = document.getElementById('admin-crown');
+        if (div && u) {
+            if (crown && u.email === ADMIN_EMAIL) crown.style.display = 'block';
+            div.innerHTML = `<button onclick="logout()" class="btn btn-outline-light btn-sm fw-bold border-0">SALIR</button>`;
+        }
+    } catch (e) {}
 }
 
-window.logout = function() {
-    localStorage.clear();
-    window.location.href = 'index.html';
-};
+window.logout = function() { localStorage.clear(); window.location.href = 'index.html'; };
 
-// Lógica de Venta Nocturna
 function startCountdown() {
     let t = 600;
     setInterval(() => {
-        if (t <= 0) {
-            if (!isOfferActive) activateNightSale();
-            return;
-        }
+        if (t <= 0) { if (!isOfferActive) activateNightSale(); return; }
         t--;
-        const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60;
+        const h = Math.floor(t/3600);
+        const m = Math.floor((t%3600)/60);
+        const s = t%60;
         const elH = document.getElementById('hours');
-        if(elH) {
-            elH.innerText = h<10?'0'+h:h; 
-            document.getElementById('minutes').innerText = m<10?'0'+m:m; 
-            document.getElementById('seconds').innerText = s<10?'0'+s:s;
+        if (elH) {
+            elH.innerText = h < 10 ? '0'+h : h; 
+            document.getElementById('minutes').innerText = m < 10 ? '0'+m : m; 
+            document.getElementById('seconds').innerText = s < 10 ? '0'+s : s;
         }
     }, 1000);
 }
@@ -470,27 +444,23 @@ async function activateNightSale() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ active: true })
         });
-        alert("🌙 VENTA NOCTURNA: Precios actualizados.");
+        alert("🌙 VENTA NOCTURNA: ¡Precios actualizados!");
         loadCatalog(true);
-        const offers = document.getElementById('offers');
-        if(offers) offers.style.border = "2px solid #00ff00";
     } catch(e) {}
 }
 
-// Chatbot
 function initChatbot() { 
     const t = document.getElementById('chatTrigger'), w = document.getElementById('chatWidget'), c = document.getElementById('closeChat'), s = document.getElementById('sendChat'), i = document.getElementById('chatInput'), b = document.getElementById('chatBody');
     if(!t) return;
     t.onclick = () => { w.style.display = 'flex'; t.style.display = 'none'; };
     c.onclick = () => { w.style.display = 'none'; t.style.display = 'flex'; };
-
     const send = () => {
         if (!i.value.trim()) return;
         b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${i.value}</span></div>`;
         i.value = '';
         b.scrollTop = b.scrollHeight;
         setTimeout(() => {
-            b.innerHTML += `<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Para soporte, usa el WhatsApp oficial.</span></div>`;
+            b.innerHTML += `<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Para soporte técnico, usa el WhatsApp.</span></div>`;
             b.scrollTop = b.scrollHeight;
         }, 1000);
     };
@@ -498,11 +468,63 @@ function initChatbot() {
     if(i) i.onkeypress = (e) => { if (e.key === 'Enter') send(); };
 }
 
-// Auth
-function initStrictRegister() { /* Lógica Auth (ya incluida en tu index) */ }
-function initLogin() { /* Lógica Auth (ya incluida en tu index) */ }
+function initStrictRegister() {
+    const f = document.getElementById('register-form');
+    const pInput = document.getElementById('reg-phone');
+    if (pInput && window.intlTelInput) {
+        itiInstance = window.intlTelInput(pInput, {
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js",
+            initialCountry: "auto",
+            geoIpLookup: cb => fetch("https://ipapi.co/json").then(r=>r.json()).then(d=>cb(d.country_code)).catch(()=>cb("co"))
+        });
+    }
+    if (f) {
+        f.addEventListener('submit', async e => {
+            e.preventDefault();
+            const pass = document.getElementById('reg-pass').value;
+            if (pass.length < 8) return alert("Contraseña insegura (min 8 chars)");
+            try {
+                const res = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('reg-name').value,
+                        email: document.getElementById('reg-email').value,
+                        password: pass,
+                        phone: itiInstance ? itiInstance.getNumber() : pInput.value
+                    })
+                });
+                const d = await res.json();
+                if (res.ok) { alert(d.message); window.location.href = 'login.html'; }
+                else alert(d.message);
+            } catch (err) { alert("Error servidor"); }
+        });
+    }
+}
 
-// Reseñas
+function initLogin() {
+    const f = document.getElementById('login-form');
+    if (f) {
+        f.addEventListener('submit', async e => {
+            e.preventDefault();
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('login-email').value,
+                        password: document.getElementById('login-pass').value
+                    })
+                });
+                const d = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('token', d.token);
+                    localStorage.setItem('user', JSON.stringify(d.user));
+                    window.location.href = 'index.html';
+                } else alert(d.message);
+            } catch (err) { alert("Error conexión"); }
+        });
+    }
+}
+
 async function loadReviews(pid) {
     const c = document.getElementById('reviewsContainer');
     if (c) {

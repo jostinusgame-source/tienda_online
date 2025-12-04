@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     
-    <!-- LEAFLET (MAPA) - CSS y JS Requerido -->
+    <!-- LEAFLET (MAPA) - CSS y JS (IMPORTANTE: JS AGREGADO) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -62,7 +62,7 @@
         
         .chat-widget { position: fixed; bottom: 100px; right: 100px; width: 320px; height: 400px; background: #111; border: 1px solid #333; border-radius: 12px; display: none; flex-direction: column; z-index: 9999; }
 
-        /* PRECIOS */
+        /* UTILS */
         .price-slider-wrapper { background: #151515; padding: 10px; border-radius: 5px; border: 1px solid #333; }
         input[type=range] { width: 100%; accent-color: var(--primary-red); }
     </style>
@@ -79,9 +79,7 @@
                     <span style="font-size: 0.6rem; letter-spacing: 3px; color: #888;">OFFICIAL DEALER</span>
                 </div>
             </a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
-            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mx-auto">
                     <li class="nav-item"><a class="nav-link" href="#hero">INICIO</a></li>
@@ -102,9 +100,9 @@
         </div>
     </nav>
 
-    <!-- HERO 3D (CÍRCULO ROJO RESTAURADO) -->
+    <!-- HERO 3D (AQUÍ ESTÁ LA BOLA) -->
     <section id="hero">
-        <div id="canvas-container"></div> <!-- AQUÍ VA EL THREE.JS -->
+        <div id="canvas-container"></div> 
         <div class="container position-relative z-1 text-center text-lg-start">
             <div class="row">
                 <div class="col-lg-8">
@@ -121,7 +119,7 @@
         </div>
     </section>
 
-    <!-- OFERTA NOCTURNA -->
+    <!-- OFERTA -->
     <section id="offers" class="py-5 bg-black border-top border-bottom border-secondary">
         <div class="container">
             <div class="row align-items-center bg-dark p-4 rounded border border-secondary">
@@ -160,7 +158,7 @@
             <div id="loader" class="text-center py-5"><div class="spinner-border text-danger"></div></div>
             <div id="products-container" class="row g-4 d-none"></div>
             
-            <!-- BOTÓN CARGAR MÁS (AQUÍ ESTÁ) -->
+            <!-- BOTÓN CARGAR MÁS -->
             <div class="text-center mt-5">
                 <button id="load-more-btn" class="btn btn-outline-light px-5 py-2 rounded-0 d-none">CARGAR MÁS</button>
             </div>
@@ -174,34 +172,13 @@
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="custom-card p-4 h-100 text-center">
-                        <div class="mx-auto mb-3 border border-danger rounded-circle p-1" style="width: 70px; height: 70px;">
-                            <img src="https://randomuser.me/api/portraits/men/32.jpg" class="rounded-circle w-100 h-100 object-fit-cover">
-                        </div>
+                        <img src="https://randomuser.me/api/portraits/men/32.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
                         <h5 class="text-white fw-bold">Juan Pablo Montoya</h5>
-                        <div class="text-warning mb-3 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-                        <p class="text-secondary small fst-italic">"El nivel de detalle es absurdo. Llegó perfecto a Miami."</p>
+                        <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p class="text-secondary small fst-italic">"Detalles increíbles. Envío rápido."</p>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="custom-card p-4 h-100 text-center">
-                        <div class="mx-auto mb-3 border border-danger rounded-circle p-1" style="width: 70px; height: 70px;">
-                            <img src="https://randomuser.me/api/portraits/women/44.jpg" class="rounded-circle w-100 h-100 object-fit-cover">
-                        </div>
-                        <h5 class="text-white fw-bold">Tatiana Calderón</h5>
-                        <div class="text-warning mb-3 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-                        <p class="text-secondary small fst-italic">"El empaque protegió la caja original. Una joya para mi colección."</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="custom-card p-4 h-100 text-center">
-                        <div class="mx-auto mb-3 border border-danger rounded-circle p-1" style="width: 70px; height: 70px;">
-                            <img src="https://randomuser.me/api/portraits/men/85.jpg" class="rounded-circle w-100 h-100 object-fit-cover">
-                        </div>
-                        <h5 class="text-white fw-bold">Carlos Sainz</h5>
-                        <div class="text-warning mb-3 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></div>
-                        <p class="text-secondary small fst-italic">"SpeedCollect es el único lugar donde compro mis modelos 1:18."</p>
-                    </div>
-                </div>
+                <!-- Más reseñas -->
             </div>
         </div>
     </section>
@@ -209,25 +186,14 @@
     <!-- CONTACTO -->
     <section id="contact" class="py-5 bg-black">
         <div class="container">
-            <div class="row g-0 border border-secondary rounded-4 overflow-hidden shadow-lg">
-                <div class="col-lg-5 bg-dark p-5 d-flex flex-column justify-content-center">
-                    <h3 class="text-white mb-4 border-bottom border-danger pb-2 d-inline-block">CONTACTO VIP</h3>
-                    <div class="mb-4 d-flex align-items-center">
-                        <div class="bg-black p-3 rounded-circle me-3 text-success border border-secondary"><i class="fa-brands fa-whatsapp fa-2x"></i></div>
-                        <div><small class="text-muted d-block fw-bold">WHATSAPP</small><span class="text-white fs-5 fw-bold">+57 322 262 5352</span></div>
-                    </div>
-                    <div class="mb-4 d-flex align-items-center">
-                        <div class="bg-black p-3 rounded-circle me-3 text-danger border border-secondary"><i class="fa-regular fa-envelope fa-2x"></i></div>
-                        <div><small class="text-muted d-block fw-bold">EMAIL</small><span class="text-white fs-5 fw-bold">jsusgamep@itc.edu.co</span></div>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <div class="bg-black p-3 rounded-circle me-3 text-primary border border-secondary"><i class="fa-solid fa-map-location-dot fa-2x"></i></div>
-                        <div><small class="text-muted d-block fw-bold">SHOWROOM</small><span class="text-white">Av. El Dorado #68C-61, Bogotá</span></div>
-                    </div>
+            <div class="row g-0 border border-secondary rounded overflow-hidden">
+                <div class="col-lg-5 bg-dark p-5">
+                    <h3 class="text-white mb-4">CONTACTO VIP</h3>
+                    <div class="mb-3"><i class="fa-brands fa-whatsapp text-success me-2"></i> <span class="text-white fw-bold">+57 322 262 5352</span></div>
+                    <div class="mb-3"><i class="fa-regular fa-envelope text-danger me-2"></i> <span class="text-white fw-bold">jsusgamep@itc.edu.co</span></div>
+                    <div><i class="fa-solid fa-location-dot text-primary me-2"></i> <span class="text-white">Bogotá D.C.</span></div>
                 </div>
-                <div class="col-lg-7 position-relative">
-                    <div id="map" class="h-100 w-100" style="min-height: 450px; filter: grayscale(100%) invert(100%) contrast(90%);"></div>
-                </div>
+                <div class="col-lg-7"><div id="map" class="h-100" style="min-height: 350px; filter: grayscale(100%) invert(100%);"></div></div>
             </div>
         </div>
     </section>
@@ -237,26 +203,23 @@
         <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Inc. Pasión por la velocidad.</p>
     </footer>
 
-    <!-- WIDGETS -->
-    <div id="admin-crown" class="admin-crown-floating" title="Panel de Control"><a href="admin.html" class="text-warning"><i class="fa-solid fa-crown"></i></a></div>
+    <!-- ELEMENTOS FLOTANTES -->
+    <div id="admin-crown" class="admin-crown-floating" title="Admin Panel"><a href="admin.html" class="text-warning"><i class="fa-solid fa-crown"></i></a></div>
     
     <div id="chatTrigger" class="chat-trigger"><i class="fa-solid fa-robot fa-xl text-white"></i></div>
     <div id="chatWidget" class="chat-widget">
         <div class="p-3 text-white d-flex justify-content-between align-items-center" style="background:#D40000;">
-            <span class="fw-bold">Asistente Virtual</span><button id="closeChat" class="btn-close btn-close-white"></button>
+            <span class="fw-bold">Asistente</span><button id="closeChat" class="btn-close btn-close-white"></button>
         </div>
-        <div id="chatBody" class="p-3 text-white bg-black flex-grow-1" style="overflow-y:auto;">
-            <div class="p-2 mb-2 rounded bg-dark border-start border-3 border-danger small">Bienvenido. ¿Buscas algún modelo en especial?</div>
-        </div>
+        <div id="chatBody" class="p-3 text-white bg-black flex-grow-1" style="overflow-y:auto;"></div>
         <div class="p-2 bg-dark d-flex gap-2 border-top border-secondary">
             <input id="chatInput" class="form-control bg-black text-white border-secondary form-control-sm" placeholder="Escribe...">
             <button id="sendChat" class="btn btn-danger btn-sm"><i class="fa-paper-plane"></i></button>
         </div>
     </div>
-    
     <a href="https://wa.me/573222625352" class="whatsapp-float" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
 
-    <!-- MODAL PRODUCTO -->
+    <!-- MODALES -->
     <div class="modal fade" id="productModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content bg-black text-white border-secondary shadow-lg">
@@ -268,18 +231,13 @@
                     <div class="row">
                         <div class="col-lg-8 mb-3" id="visual-container" style="min-height: 400px; background:#111;"></div>
                         <div class="col-lg-4">
-                            <div id="price-display-container" class="mb-2">
-                                <h2 class="text-danger fw-bold" id="modal-p-price">$0.00</h2>
-                            </div>
-                            <p class="text-warning small mb-3" id="modal-p-stock">Stock: 0</p>
-                            <p class="text-secondary" id="modal-p-desc">Descripción...</p>
+                            <div id="modal-p-price" class="mb-2"></div>
+                            <div id="modal-p-stock" class="mb-3 small"></div>
+                            <p id="modal-p-desc" class="text-secondary"></p>
                             <hr class="border-secondary">
-                            <h6 class="text-uppercase small fw-bold text-muted mb-2">Reseñas de este modelo</h6>
-                            <div id="reviewsContainer" class="mb-3 custom-scrollbar border border-secondary rounded p-2" style="max-height: 150px; overflow-y: auto; background: #0f0f0f;"></div>
-                            <form id="reviewForm">
-                                <textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Escribe tu opinión..."></textarea>
-                                <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold">PUBLICAR OPINIÓN</button>
-                            </form>
+                            <h6>Opiniones</h6>
+                            <div id="reviewsContainer" class="mb-2" style="max-height:150px; overflow-y:auto;"></div>
+                            <form id="reviewForm"><textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Opinar..."></textarea><button class="btn btn-outline-danger w-100 btn-sm">ENVIAR</button></form>
                         </div>
                     </div>
                 </div>
@@ -287,13 +245,12 @@
         </div>
     </div>
 
-    <!-- PAGO -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border-secondary">
                 <div class="modal-header border-secondary"><h5 class="modal-title fw-bold">TU GARAJE</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body"><div id="cart-items"></div><div class="d-flex justify-content-between fw-bold fs-5 mt-3 pt-3 border-top border-secondary"><span>TOTAL + IVA:</span><span id="cart-total" class="text-danger">$0.00</span></div></div>
-                <div class="modal-footer border-secondary"><button class="btn btn-success w-100 fw-bold shadow" onclick="checkout()">CONFIRMAR COMPRA Y GENERAR FACTURA</button></div>
+                <div class="modal-footer border-secondary"><button class="btn btn-success w-100 fw-bold shadow" onclick="checkout()">CONFIRMAR COMPRA</button></div>
             </div>
         </div>
     </div>
@@ -303,8 +260,8 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark border-danger text-center p-4">
                 <div class="mb-3"><i class="fa-solid fa-lock fa-3x text-danger"></i></div>
-                <h4 class="text-white fw-bold">Acceso Restringido</h4>
-                <p class="text-muted">Debes iniciar sesión para acceder al garaje.</p>
+                <h4 class="text-white">Acceso Restringido</h4>
+                <p class="text-muted">Debes iniciar sesión.</p>
                 <div class="d-flex justify-content-center gap-3 mt-3">
                     <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
                     <a href="login.html" class="btn btn-danger fw-bold px-4">Entrar</a>
@@ -317,14 +274,15 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="script.js"></script>
 
-    <!-- 3D HERO ANIMATION (THREE.JS) -->
+    <!-- SCRIPT: BOLA 3D RESTAURADA -->
     <script>
+        // Mapa
         const map = L.map('map', {scrollWheelZoom:false}).setView([4.678, -74.056], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
         const icon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [40, 40] });
-        L.marker([4.678, -74.056], {icon: icon}).addTo(map).bindPopup('<b style="color:#000">SpeedCollect HQ</b>').openPopup();
+        L.marker([4.678, -74.056], {icon: icon}).addTo(map).bindPopup('<b>SpeedCollect</b>').openPopup();
 
-        // CIRCULO 3D (TORUS KNOT)
+        // Three.js Hero
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -334,11 +292,7 @@
         container.appendChild(renderer.domElement);
         
         const geometry = new THREE.TorusKnotGeometry(12, 3, 100, 16);
-        const material = new THREE.MeshPhongMaterial({
-            color: 0xD40000, 
-            wireframe: true, 
-            emissive: 0x550000
-        });
+        const material = new THREE.MeshPhongMaterial({ color: 0xD40000, wireframe: true, emissive: 0x550000 });
         const torusKnot = new THREE.Mesh(geometry, material);
         scene.add(torusKnot);
         
