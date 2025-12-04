@@ -5,66 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpeedCollect | Garage Exclusivo</title>
     
-    <!-- LIBRERÍAS (Bootstrap, Iconos, Mapa, Teléfono, PDF) -->
+    <!-- LIBRERÍAS EXTERNAS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    
-    <!-- LEAFLET (MAPA) - CSS y JS (IMPORTANTE: JS AGREGADO) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
     
-    <!-- VISORES 3D (Three.js para fondo, ModelViewer para productos) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- ✅ VISOR 3D GOOGLE -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
     
-    <!-- PDF GENERATOR -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-    <!-- FUENTES -->
+    <!-- TIPOGRAFÍA PREMIUM -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800&family=Russo+One&display=swap" rel="stylesheet">
 
     <style>
-        :root { --primary-red: #E60000; --dark-bg: #050505; --glass: rgba(10, 10, 10, 0.95); }
-        body { background-color: var(--dark-bg); color: white; font-family: 'Montserrat', sans-serif; overflow-x: hidden; }
-        
-        /* TIPOGRAFÍA */
-        .brand-font, h1, h2, h3 { font-family: 'Russo One', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
-        
-        /* NAVBAR */
-        .glass-nav { background: var(--glass); backdrop-filter: blur(15px); border-bottom: 1px solid #222; padding: 15px 0; }
-        .nav-link { color: #ccc !important; font-weight: 700; font-size: 0.85rem; transition: 0.3s; }
-        .nav-link:hover { color: var(--primary-red) !important; text-shadow: 0 0 10px var(--primary-red); }
-
-        /* CORONA ADMIN */
-        .admin-crown-floating { 
-            display: none; position: fixed; bottom: 170px; right: 35px; 
-            font-size: 2rem; color: #FFD700; cursor: pointer; z-index: 9999;
-            filter: drop-shadow(0 0 5px orange); animation: float 3s infinite ease-in-out;
+        :root {
+            --primary-red: #E60000;
+            --primary-glow: rgba(230, 0, 0, 0.6);
+            --dark-bg: #050505;
+            --card-bg: #0f0f0f;
+            --text-silver: #e0e0e0;
+            --glass: rgba(12, 12, 12, 0.92);
         }
-        @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
 
-        /* HERO 3D */
-        #hero { height: 100vh; position: relative; display: flex; align-items: center; overflow: hidden; }
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        body {
+            background-color: var(--dark-bg);
+            color: #FFFFFF;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* --- TIPOGRAFÍA DE MARCA --- */
+        .brand-font {
+            font-family: 'Russo One', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
         
-        /* TARJETAS */
-        .custom-card { background: #111; border: 1px solid #333; transition: 0.4s; }
-        .custom-card:hover { transform: translateY(-5px); border-color: var(--primary-red); box-shadow: 0 10px 30px rgba(212,0,0,0.2); }
+        h1, h2, h3 {
+            font-family: 'Russo One', sans-serif;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        }
 
-        /* BOTONES FLOTANTES */
-        .chat-trigger, .whatsapp-float { position: fixed; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 9998; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .chat-trigger { bottom: 100px; right: 30px; background: #111; border: 2px solid var(--primary-red); color: white; font-size: 24px; }
-        .whatsapp-float { bottom: 30px; right: 30px; background: #25d366; color: white; font-size: 32px; text-decoration: none; }
+        /* --- LOGO ANIMADO SVG --- */
+        .brand-logo-svg {
+            height: 40px;
+            width: auto;
+            filter: drop-shadow(0 0 8px rgba(230, 0, 0, 0.6));
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .navbar-brand:hover .brand-logo-svg {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        /* --- NAVBAR DE LUJO --- */
+        .glass-nav {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 15px 0;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+        }
+        .nav-link {
+            color: #aaa !important;
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin: 0 10px;
+            position: relative;
+            transition: 0.3s;
+            letter-spacing: 1px;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff !important;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .nav-link.active::after {
+            content: ''; position: absolute; bottom: -5px; left: 0; width: 100%; height: 2px;
+            background: var(--primary-red);
+            box-shadow: 0 0 10px var(--primary-red);
+        }
+
+        /* --- BOTÓN LOGIN GLOW --- */
+        .btn-login-glow {
+            background: transparent;
+            border: 2px solid var(--primary-red);
+            color: white;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 8px 25px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            transition: 0.4s;
+            box-shadow: 0 0 15px rgba(230, 0, 0, 0.2);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+        .btn-login-glow:hover {
+            background: var(--primary-red);
+            color: white;
+            box-shadow: 0 0 30px rgba(230, 0, 0, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* --- FILTRO DE PRECIO (SLIDER) --- */
+        .price-slider-wrapper {
+            background: #151515;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        input[type=range] {
+            accent-color: var(--primary-red);
+            cursor: pointer;
+            width: 100%;
+            height: 4px;
+        }
+
+        /* --- TARJETAS --- */
+        .custom-card {
+            background: var(--card-bg);
+            border: 1px solid #222;
+            transition: all 0.4s ease;
+            border-radius: 6px;
+        }
+        .custom-card:hover {
+            border-color: var(--primary-red);
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(230, 0, 0, 0.15);
+        }
         
-        .chat-widget { position: fixed; bottom: 100px; right: 100px; width: 320px; height: 400px; background: #111; border: 1px solid #333; border-radius: 12px; display: none; flex-direction: column; z-index: 9999; }
+        /* CORONA FLOTANTE (Movida de posición) */
+        .admin-crown-floating { 
+            display: none; /* Se activa con JS */
+            position: fixed;
+            bottom: 170px; /* Encima del bot */
+            right: 38px;
+            cursor: pointer; 
+            animation: float 3s infinite; 
+            filter: drop-shadow(0 0 8px red); 
+            z-index: 10000;
+            font-size: 2rem;
+            color: #FFD700; /* Dorado */
+        }
+        @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
 
-        /* UTILS */
-        .price-slider-wrapper { background: #151515; padding: 10px; border-radius: 5px; border: 1px solid #333; }
-        input[type=range] { width: 100%; accent-color: var(--primary-red); }
+        /* WIDGETS */
+        .chat-widget { position: fixed; bottom: 100px; right: 30px; width: 320px; height: 450px; background: #111; border: 1px solid #333; border-radius: 12px; display: none; flex-direction: column; z-index: 9999; box-shadow: 0 0 60px rgba(0,0,0,0.9); }
+        .chat-trigger { position: fixed; bottom: 100px; right: 30px; width: 60px; height: 60px; background: #111; border: 2px solid var(--primary-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 9998; transition: 0.3s; box-shadow: 0 0 20px rgba(230,0,0,0.3); }
+        .chat-trigger:hover { transform: scale(1.1); background: var(--primary-red); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-red); }
     </style>
 </head>
 <body>
@@ -72,113 +175,170 @@
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg fixed-top navbar-dark glass-nav">
         <div class="container-fluid px-lg-5">
+            
+            <!-- LOGO -->
             <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-                <i class="fa-solid fa-flag-checkered text-danger fa-lg"></i>
-                <div class="d-flex flex-column lh-1">
-                    <span class="brand-font fs-4">SPEED<span class="text-danger">COLLECT</span></span>
-                    <span style="font-size: 0.6rem; letter-spacing: 3px; color: #888;">OFFICIAL DEALER</span>
+                <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 30 H 70 A 10 10 0 0 1 80 40 V 60 A 10 10 0 0 1 70 70 H 30 A 10 10 0 0 0 20 80" stroke="#D40000" stroke-width="8" stroke-linecap="round"/>
+                    <path d="M85 20 L 60 45" stroke="white" stroke-width="3"/>
+                    <circle cx="50" cy="50" r="42" stroke="white" stroke-width="2" stroke-dasharray="5 5" opacity="0.3"/>
+                </svg>
+                <div class="d-flex flex-column justify-content-center" style="line-height: 1;">
+                    <span class="brand-font fs-4 text-white" style="letter-spacing: 1px;">SPEED<span style="color:var(--primary-red)">COLLECT</span></span>
+                    <span style="font-size: 0.55rem; letter-spacing: 4px; color: #888; font-weight: 700;">OFFICIAL DEALER</span>
                 </div>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav mx-auto">
-                    <li class="nav-item"><a class="nav-link" href="#hero">INICIO</a></li>
+                <ul class="navbar-nav mx-auto align-items-center">
+                    <li class="nav-item"><a class="nav-link active" href="#hero">INICIO</a></li>
                     <li class="nav-item"><a class="nav-link" href="#showroom">GARAJE</a></li>
                     <li class="nav-item"><a class="nav-link" href="#offers">OFERTAS</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#reviews">OPINIONES</a></li>
                     <li class="nav-item"><a class="nav-link" href="#contact">CONTACTO</a></li>
                 </ul>
-                <div class="d-flex align-items-center gap-3">
+                
+                <div class="d-flex align-items-center gap-4 mt-3 mt-lg-0">
+                    <!-- Carrito -->
                     <a href="#" class="position-relative text-white fs-5" onclick="openPaymentModal()">
-                        <i class="fa-solid fa-cart-shopping"></i>
-                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-black" style="display:none; font-size:0.6rem;">0</span>
+                        <i class="fa-solid fa-cart-shopping hover-scale" style="transition:0.3s"></i>
+                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger border border-black" style="display:none; padding:4px 6px; font-size:0.6rem;">0</span>
                     </a>
+
+                    <!-- BOTÓN LOGIN -->
                     <div id="auth-section">
-                        <a href="login.html" class="btn btn-outline-danger btn-sm fw-bold px-4">LOGIN</a>
+                        <a href="login.html" class="btn-login-glow">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i> Acceder
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- HERO 3D (AQUÍ ESTÁ LA BOLA) -->
-    <section id="hero">
-        <div id="canvas-container"></div> 
-        <div class="container position-relative z-1 text-center text-lg-start">
+    <!-- HERO 3D -->
+    <section id="hero" class="vh-100 d-flex align-items-center position-relative overflow-hidden">
+        <div id="canvas-container" class="position-absolute w-100 h-100" style="z-index: 0;"></div>
+        <div class="container position-relative z-1">
             <div class="row">
                 <div class="col-lg-8">
-                    <div class="badge bg-danger mb-3 animate__animated animate__fadeInDown">NUEVA COLECCIÓN</div>
-                    <h1 class="display-1 fw-bold fst-italic animate__animated animate__fadeInLeft" style="text-shadow: 0 0 30px black;">
-                        INGENIERÍA <br><span class="text-danger">INMORTAL</span>
+                    <div class="d-inline-block border border-danger text-danger px-3 py-1 mb-3 rounded-pill fw-bold small animate__animated animate__fadeInDown">
+                        <i class="fa-solid fa-star"></i> COLECCIÓN 2025 DISPONIBLE
+                    </div>
+                    <h1 class="display-1 fw-bold fst-italic animate__animated animate__fadeInLeft" style="font-size: 4.5rem; text-shadow: 0 0 40px rgba(0,0,0,0.9);">
+                        INGENIERÍA <br><span style="color: var(--primary-red); -webkit-text-stroke: 1px rgba(255,255,255,0.2);">INMORTAL</span>
                     </h1>
-                    <p class="fs-4 text-secondary mb-4 animate__animated animate__fadeInLeft animate__delay-1s">
-                        Modelos 1:18 exclusivos. Detalles obsesivos.
+                    <p class="fs-4 mt-3 mb-5 text-silver animate__animated animate__fadeInLeft animate__delay-1s" style="max-width: 600px;">
+                        Modelos die-cast a escala 1:18 con un nivel de detalle obsesivo. La perfección no es un acto, es un hábito.
                     </p>
-                    <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold shadow-lg animate__animated animate__fadeInUp animate__delay-2s">VER CATÁLOGO</a>
+                    <div class="animate__animated animate__fadeInUp animate__delay-2s d-flex gap-3">
+                        <a href="#showroom" class="btn btn-danger btn-lg rounded-0 px-5 fw-bold shadow-lg">VER GARAJE</a>
+                        <a href="#contact" class="btn btn-outline-light btn-lg rounded-0 px-5 fw-bold">UBICACIÓN</a>
+                    </div>
                 </div>
             </div>
         </div>
+        <div class="position-absolute bottom-0 start-50 translate-middle-x mb-4 text-white opacity-50 animate__animated animate__bounce animate__infinite">
+            <i class="fa-solid fa-chevron-down fa-lg"></i>
+        </div>
     </section>
 
-    <!-- OFERTA -->
+    <!-- OFERTA FLASH -->
     <section id="offers" class="py-5 bg-black border-top border-bottom border-secondary">
         <div class="container">
-            <div class="row align-items-center bg-dark p-4 rounded border border-secondary">
+            <div class="row align-items-center bg-dark p-4 rounded border border-secondary shadow-lg">
                 <div class="col-md-7">
-                    <h2 class="text-danger fst-italic m-0">VENTA NOCTURNA <i class="fa-solid fa-moon"></i></h2>
-                    <p class="text-white m-0">Descuento del <strong>20%</strong> al finalizar el contador.</p>
+                    <h2 class="text-danger fst-italic mb-0"><i class="fa-solid fa-bolt"></i> VENTA NOCTURNA</h2>
+                    <p class="mb-0 mt-2 text-white fs-5">Descuento del <strong>20%</strong> al finalizar el contador.</p>
                 </div>
-                <div class="col-md-5 text-end font-monospace fs-1 text-white">
-                    <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+                <div class="col-md-5 text-center text-md-end mt-4 mt-md-0">
+                    <div class="d-inline-flex gap-2 align-items-center font-monospace fs-1 fw-bold text-white bg-black p-3 rounded border border-danger shadow">
+                        <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- CATÁLOGO -->
+    <!-- SHOWROOM (CORREGIDO PRECIO) -->
     <section id="showroom" class="py-5">
         <div class="container">
             <div class="row mb-5 align-items-center g-3">
-                <div class="col-lg-3"><h2 class="text-white m-0 border-start border-5 border-danger ps-3">GARAJE</h2></div>
-                <div class="col-lg-3"><input type="text" id="search-input" class="form-control bg-dark text-white border-secondary" placeholder="Buscar (Ej: C para Chevrolet)"></div>
                 <div class="col-lg-3">
-                    <div class="price-slider-wrapper">
-                        <div class="d-flex justify-content-between text-white small fw-bold mb-1">
-                            <span>PRECIO MAX</span><span id="price-val">$1M</span>
-                        </div>
-                        <input type="range" id="price-range" min="0" max="1000000" step="10000" value="1000000">
+                    <h2 class="mb-0 text-white border-start border-5 border-danger ps-3">CATÁLOGO</h2>
+                </div>
+                
+                <div class="col-lg-3">
+                    <div class="input-group bg-dark rounded-1 overflow-hidden border border-secondary">
+                        <span class="input-group-text bg-transparent border-0 text-secondary"><i class="fa fa-search"></i></span>
+                        <input type="text" id="search-input" class="form-control bg-transparent border-0 text-white shadow-none" placeholder="Buscar modelo...">
                     </div>
                 </div>
-                <div class="col-lg-3 text-end" id="category-filters">
-                    <button class="btn btn-sm btn-outline-secondary text-white active" data-filter="all">TODO</button>
-                    <button class="btn btn-sm btn-outline-secondary text-white" data-filter="Autos">AUTOS</button>
-                    <button class="btn btn-sm btn-outline-secondary text-white" data-filter="Clásicos">CLÁSICOS</button>
+
+                <!-- FILTRO PRECIO CORREGIDO A 1 MILLÓN -->
+                <div class="col-lg-3">
+                    <div class="price-slider-wrapper">
+                        <div class="d-flex justify-content-between w-100 mb-1">
+                            <label class="text-muted small fw-bold"><i class="fa-solid fa-filter text-danger"></i> MAX:</label>
+                            <span id="price-val" class="text-white fw-bold small">$1,000,000</span>
+                        </div>
+                        <input type="range" id="price-range" class="form-range" min="0" max="1000000" step="10000" value="1000000">
+                    </div>
+                </div>
+
+                <div class="col-lg-3 text-lg-end" id="category-filters">
+                    <button class="btn btn-sm btn-outline-secondary text-white active rounded-0 px-3 fw-bold" data-filter="all">TODO</button>
+                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3 fw-bold" data-filter="Autos">AUTOS</button>
+                    <button class="btn btn-sm btn-outline-secondary text-white rounded-0 px-3 fw-bold" data-filter="Clásico">CLÁSICOS</button>
                 </div>
             </div>
-
-            <div id="loader" class="text-center py-5"><div class="spinner-border text-danger"></div></div>
+            
+            <div id="loader" class="text-center py-5">
+                <div class="spinner-border text-danger" role="status"></div>
+                <p class="text-muted mt-3 spacing-2 small">CARGANDO FLOTA...</p>
+            </div>
+            
             <div id="products-container" class="row g-4 d-none"></div>
             
-            <!-- BOTÓN CARGAR MÁS -->
             <div class="text-center mt-5">
-                <button id="load-more-btn" class="btn btn-outline-light px-5 py-2 rounded-0 d-none">CARGAR MÁS</button>
+                <!-- El botón se crea dinámicamente -->
             </div>
         </div>
     </section>
 
-    <!-- RESEÑAS -->
+    <!-- RESEÑAS VIP (MEJORADAS PARA LEERSE BIEN) -->
     <section id="reviews" class="py-5" style="background: #080808;">
         <div class="container">
-            <h2 class="text-center mb-5 text-white">VOCES DEL <span class="text-danger">PADDOCK</span></h2>
+            <h2 class="text-center mb-5">VOCES DEL <span class="text-danger">PADDOCK</span></h2>
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="custom-card p-4 h-100 text-center">
                         <img src="https://randomuser.me/api/portraits/men/32.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
-                        <h5 class="text-white fw-bold">Juan Pablo Montoya</h5>
+                        <h5 class="fw-bold text-white">Juan Pablo Montoya</h5>
                         <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
-                        <p class="text-secondary small fst-italic">"Detalles increíbles. Envío rápido."</p>
+                        <p class="text-silver small fst-italic">"El nivel de detalle en el motor es absurdo. SpeedCollect es otro nivel."</p>
                     </div>
                 </div>
-                <!-- Más reseñas -->
+                <div class="col-md-4">
+                    <div class="custom-card p-4 h-100 text-center">
+                        <img src="https://randomuser.me/api/portraits/women/44.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
+                        <h5 class="fw-bold text-white">Tatiana Calderón</h5>
+                        <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p class="text-silver small fst-italic">"El envío fue perfecto. El empaque protegió la caja original del Ferrari."</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="custom-card p-4 h-100 text-center">
+                        <img src="https://randomuser.me/api/portraits/men/85.jpg" class="rounded-circle mb-3 border border-danger p-1" width="70">
+                        <h5 class="fw-bold text-white">Carlos Sainz</h5>
+                        <div class="text-warning mb-2 small"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
+                        <p class="text-silver small fst-italic">"La mejor tienda de die-cast en Colombia. 100% recomendados."</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -186,32 +346,49 @@
     <!-- CONTACTO -->
     <section id="contact" class="py-5 bg-black">
         <div class="container">
-            <div class="row g-0 border border-secondary rounded overflow-hidden">
-                <div class="col-lg-5 bg-dark p-5">
-                    <h3 class="text-white mb-4">CONTACTO VIP</h3>
-                    <div class="mb-3"><i class="fa-brands fa-whatsapp text-success me-2"></i> <span class="text-white fw-bold">+57 322 262 5352</span></div>
-                    <div class="mb-3"><i class="fa-regular fa-envelope text-danger me-2"></i> <span class="text-white fw-bold">jsusgamep@itc.edu.co</span></div>
-                    <div><i class="fa-solid fa-location-dot text-primary me-2"></i> <span class="text-white">Bogotá D.C.</span></div>
+            <div class="row g-0 border border-secondary rounded-4 overflow-hidden shadow-lg">
+                <div class="col-lg-5 bg-dark p-5 d-flex flex-column justify-content-center">
+                    <h3 class="mb-4 text-white border-bottom border-danger pb-2 d-inline-block">CONTACTO</h3>
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="bg-black p-3 rounded-circle me-3 border border-secondary text-success"><i class="fa-brands fa-whatsapp fa-2x"></i></div>
+                        <div><small class="text-muted fw-bold d-block">WHATSAPP</small><span class="text-white fs-5 fw-bold">+57 322 262 5352</span></div>
+                    </div>
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="bg-black p-3 rounded-circle me-3 border border-secondary text-danger"><i class="fa-regular fa-envelope fa-2x"></i></div>
+                        <div><small class="text-muted fw-bold d-block">EMAIL</small><span class="text-white fs-5 fw-bold">jsusgamep@itc.edu.co</span></div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="bg-black p-3 rounded-circle me-3 border border-secondary text-primary"><i class="fa-solid fa-map-location-dot fa-2x"></i></div>
+                        <div><small class="text-muted fw-bold d-block">SHOWROOM</small><span class="text-white">Av. El Dorado #68C-61, Bogotá</span></div>
+                    </div>
                 </div>
-                <div class="col-lg-7"><div id="map" class="h-100" style="min-height: 350px; filter: grayscale(100%) invert(100%);"></div></div>
+                <div class="col-lg-7 position-relative">
+                    <div id="map" class="h-100 w-100" style="min-height: 450px; filter: grayscale(100%) invert(100%) contrast(90%);"></div>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- FOOTER -->
     <footer class="bg-black py-4 border-top border-secondary mt-5 text-center">
-        <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Inc. Pasión por la velocidad.</p>
+        <p class="text-muted small mb-0">&copy; 2025 SpeedCollect Inc.</p>
     </footer>
 
-    <!-- ELEMENTOS FLOTANTES -->
-    <div id="admin-crown" class="admin-crown-floating" title="Admin Panel"><a href="admin.html" class="text-warning"><i class="fa-solid fa-crown"></i></a></div>
+    <!-- WIDGETS Y CORONA FLOTANTE -->
     
+    <!-- CORONA ADMIN FLOTANTE ENCIMA DEL BOT (NUEVA UBICACIÓN) -->
+    <div id="admin-crown" class="admin-crown-floating" title="Panel de Control">
+        <a href="admin.html" class="text-warning"><i class="fa-solid fa-crown"></i></a>
+    </div>
+
     <div id="chatTrigger" class="chat-trigger"><i class="fa-solid fa-robot fa-xl text-white"></i></div>
     <div id="chatWidget" class="chat-widget">
         <div class="p-3 text-white d-flex justify-content-between align-items-center" style="background:#D40000;">
-            <span class="fw-bold">Asistente</span><button id="closeChat" class="btn-close btn-close-white"></button>
+            <span class="fw-bold">SpeedBot AI</span><button id="closeChat" class="btn-close btn-close-white"></button>
         </div>
-        <div id="chatBody" class="p-3 text-white bg-black flex-grow-1" style="overflow-y:auto;"></div>
+        <div id="chatBody" class="p-3 text-white bg-black" style="height:340px; overflow-y:auto;">
+            <div class="p-2 mb-2 rounded bg-dark border-start border-3 border-danger small">Hola, soy tu asistente virtual. ¿En qué te ayudo hoy?</div>
+        </div>
         <div class="p-2 bg-dark d-flex gap-2 border-top border-secondary">
             <input id="chatInput" class="form-control bg-black text-white border-secondary form-control-sm" placeholder="Escribe...">
             <button id="sendChat" class="btn btn-danger btn-sm"><i class="fa-paper-plane"></i></button>
@@ -219,7 +396,7 @@
     </div>
     <a href="https://wa.me/573222625352" class="whatsapp-float" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
 
-    <!-- MODALES -->
+    <!-- MODAL PRODUCTO -->
     <div class="modal fade" id="productModal" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content bg-black text-white border-secondary shadow-lg">
@@ -229,15 +406,18 @@
                 </div>
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-lg-8 mb-3" id="visual-container" style="min-height: 400px; background:#111;"></div>
+                        <div class="col-lg-8 mb-3" id="visual-container" style="min-height: 400px; background: #111; border-radius: 8px;"></div>
                         <div class="col-lg-4">
-                            <div id="modal-p-price" class="mb-2"></div>
-                            <div id="modal-p-stock" class="mb-3 small"></div>
-                            <p id="modal-p-desc" class="text-secondary"></p>
+                            <div id="price-display-container"><h2 class="text-danger fw-bold" id="modal-p-price">$0.00</h2></div>
+                            <p class="text-warning small mb-3" id="modal-p-stock">Stock: 0</p>
+                            <p class="text-secondary" id="modal-p-desc">...</p>
                             <hr class="border-secondary">
-                            <h6>Opiniones</h6>
-                            <div id="reviewsContainer" class="mb-2" style="max-height:150px; overflow-y:auto;"></div>
-                            <form id="reviewForm"><textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Opinar..."></textarea><button class="btn btn-outline-danger w-100 btn-sm">ENVIAR</button></form>
+                            <h6 class="text-uppercase small fw-bold text-muted">Opiniones</h6>
+                            <div id="reviewsContainer" class="mb-3 custom-scrollbar border border-secondary rounded p-2" style="max-height: 150px; overflow-y: auto; background:#0f0f0f;"></div>
+                            <form id="reviewForm">
+                                <textarea id="review-comment" class="form-control bg-dark text-white border-secondary mb-2" rows="2" placeholder="Escribe tu opinión..."></textarea>
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">PUBLICAR</button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -245,76 +425,47 @@
         </div>
     </div>
 
+    <!-- PAGO -->
     <div class="modal fade" id="paymentModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-dark text-white border-secondary">
                 <div class="modal-header border-secondary"><h5 class="modal-title fw-bold">TU GARAJE</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body"><div id="cart-items"></div><div class="d-flex justify-content-between fw-bold fs-5 mt-3 pt-3 border-top border-secondary"><span>TOTAL + IVA:</span><span id="cart-total" class="text-danger">$0.00</span></div></div>
-                <div class="modal-footer border-secondary"><button class="btn btn-success w-100 fw-bold shadow" onclick="checkout()">CONFIRMAR COMPRA</button></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ALERTA LOGIN -->
-    <div class="modal fade" id="loginRequiredModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content bg-dark border-danger text-center p-4">
-                <div class="mb-3"><i class="fa-solid fa-lock fa-3x text-danger"></i></div>
-                <h4 class="text-white">Acceso Restringido</h4>
-                <p class="text-muted">Debes iniciar sesión.</p>
-                <div class="d-flex justify-content-center gap-3 mt-3">
-                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
-                    <a href="login.html" class="btn btn-danger fw-bold px-4">Entrar</a>
-                </div>
+                <div class="modal-body"><div id="cart-items"></div><div class="d-flex justify-content-between fw-bold fs-4 mt-3 pt-3 border-top border-secondary"><span>TOTAL:</span><span id="cart-total" class="text-danger">$0.00</span></div></div>
+                <div class="modal-footer border-secondary"><button class="btn btn-success fw-bold w-100 shadow" onclick="checkout()">PAGAR AHORA</button></div>
             </div>
         </div>
     </div>
 
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="script.js"></script>
 
-    <!-- SCRIPT: BOLA 3D RESTAURADA -->
     <script>
-        // Mapa
-        const map = L.map('map', {scrollWheelZoom:false}).setView([4.678, -74.056], 15);
+        // Init Mapa
+        const map = L.map('map', {scrollWheelZoom: false}).setView([4.678, -74.056], 15);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
         const icon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', iconSize: [40, 40] });
-        L.marker([4.678, -74.056], {icon: icon}).addTo(map).bindPopup('<b>SpeedCollect</b>').openPopup();
+        L.marker([4.678, -74.056], {icon: icon}).addTo(map).bindPopup('<b style="color:#000">SpeedCollect HQ</b>').openPopup();
 
-        // Three.js Hero
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
-        
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        container.appendChild(renderer.domElement);
-        
-        const geometry = new THREE.TorusKnotGeometry(12, 3, 100, 16);
-        const material = new THREE.MeshPhongMaterial({ color: 0xD40000, wireframe: true, emissive: 0x550000 });
-        const torusKnot = new THREE.Mesh(geometry, material);
-        scene.add(torusKnot);
-        
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(1, 1, 2);
-        scene.add(light);
-        
-        camera.position.z = 40;
-        
-        function animateHero() {
-            requestAnimationFrame(animateHero);
-            torusKnot.rotation.x += 0.002;
-            torusKnot.rotation.y += 0.005;
-            renderer.render(scene, camera);
-        }
-        animateHero();
-        
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        // Init 3D Circle
+        const scn = new THREE.Scene();
+        const cam = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        const rdr = new THREE.WebGLRenderer({alpha:true, antialias:true});
+        rdr.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(rdr.domElement);
+        const geo = new THREE.TorusKnotGeometry(10, 3, 100, 16);
+        const mat = new THREE.MeshPhongMaterial({color: 0xD40000, wireframe: true, emissive: 0x600000});
+        const obj = new THREE.Mesh(geo, mat); scn.add(obj);
+        const l1 = new THREE.DirectionalLight(0xffffff, 1); l1.position.set(1,1,2); scn.add(l1);
+        cam.position.z = 35;
+        function anim3D(){ requestAnimationFrame(anim3D); obj.rotation.x+=0.003; obj.rotation.y+=0.005; rdr.render(scn, cam); }
+        anim3D();
+        window.addEventListener('resize', ()=>{ cam.aspect=window.innerWidth/window.innerHeight; cam.updateProjectionMatrix(); rdr.setSize(window.innerWidth, window.innerHeight); });
     </script>
 </body>
 </html>
