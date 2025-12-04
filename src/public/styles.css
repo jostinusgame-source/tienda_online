@@ -1,96 +1,76 @@
 :root {
-    --ferrari-red: #ff2800;
-    --dark-bg: #0a0a0a; /* Negro profundo, no puro */
+    --ferrari-red: #D40000;
+    --black-bg: #050505;
     --card-bg: #141414;
-    --text-primary: #ffffff;
-    --text-secondary: #b0b0b0; /* Gris claro para leer bien */
-    --neon-shadow: 0 0 10px rgba(255, 40, 0, 0.5);
+    --text-main: #FFFFFF;
+    --text-muted: #B0B0B0;
+    --border: #333333;
 }
 
 body {
+    background-color: var(--black-bg);
+    color: var(--text-main);
     font-family: 'Montserrat', sans-serif;
-    background-color: var(--dark-bg);
-    color: var(--text-primary);
     overflow-x: hidden;
 }
 
-h1, h2, h3, h4, h5, .navbar-brand {
-    font-family: 'Exo 2', sans-serif;
-}
-
-/* Efecto Glassmorphism */
+/* NAVBAR */
 .glass-nav {
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(15px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(10, 10, 10, 0.95);
+    border-bottom: 2px solid var(--ferrari-red);
+    padding: 15px 0;
 }
+.brand-font { font-family: 'Russo One', sans-serif; text-transform: uppercase; letter-spacing: 1px; }
+.nav-link { color: var(--text-muted) !important; font-weight: 600; text-transform: uppercase; font-size: 0.9rem; }
+.nav-link:hover { color: var(--ferrari-red) !important; }
 
-.glass-panel {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(5px);
-}
+/* HERO */
+#hero { height: 100vh; position: relative; display: flex; align-items: center; overflow: hidden; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); }
+#canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
 
-/* Hero Section */
-.overlay-hero {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,1) 100%);
-    z-index: 1;
-}
-.carousel-caption {
-    z-index: 2;
-}
-
-/* Tarjetas de Producto - MEJORADAS */
+/* TARJETAS */
 .product-card {
     background: var(--card-bg);
-    border: 1px solid #333;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border-radius: 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.3s ease;
 }
-
 .product-card:hover {
-    transform: translateY(-10px);
-    box-shadow: var(--neon-shadow);
+    transform: translateY(-5px);
     border-color: var(--ferrari-red);
+    box-shadow: 0 10px 30px rgba(212, 0, 0, 0.2);
 }
-
-.card-img-wrap {
-    position: relative;
-    overflow: hidden;
-    background: radial-gradient(circle at center, #2a2a2a 0%, #000 100%);
+.card-img-wrap { 
+    height: 240px; position: relative; overflow: hidden; 
+    background: #000; border-bottom: 1px solid var(--border);
 }
+.object-fit-cover { width: 100%; height: 100%; object-fit: contain; background: #000; }
 
-.price-tag {
-    font-size: 1.5rem;
-    color: var(--ferrari-red);
-    text-shadow: 0 0 5px rgba(255, 40, 0, 0.3);
+/* BOTONES */
+.btn-danger {
+    background-color: var(--ferrari-red);
+    border: none;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 2px;
 }
+.btn-danger:hover { background-color: #ff0000; box-shadow: 0 0 15px rgba(212,0,0,0.5); }
 
-/* Texto legible */
-.text-muted {
-    color: var(--text-secondary) !important;
+.btn-outline-light { border-radius: 2px; text-transform: uppercase; font-weight: 600; }
+
+/* UTILIDADES */
+.text-ferrari { color: var(--ferrari-red) !important; }
+.bg-dark { background-color: var(--card-bg) !important; }
+.form-control {
+    background: #000 !important;
+    border: 1px solid var(--border) !important;
+    color: white !important;
+    border-radius: 2px;
 }
+.form-control:focus { border-color: var(--ferrari-red) !important; box-shadow: none; }
 
-/* Animaciones */
-.hover-scale { transition: transform 0.2s; }
-.hover-scale:hover { transform: scale(1.1); }
-
-@keyframes slideInLeft {
-    from { transform: translateX(-100px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-.slide-in-left { animation: slideInLeft 1s ease-out; }
-
-/* Scrollbar personalizado */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #000; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--ferrari-red); }
-
-/* Chatbot */
-#chat-body {
-    scrollbar-width: thin;
-}
-.user-msg { background: var(--ferrari-red); color: white; border-radius: 15px 15px 0 15px; }
-.bot-msg { background: #333; color: white; border-radius: 15px 15px 15px 0; }
+/* MODAL & CHAT */
+.modal-content { background: var(--card-bg); border: 1px solid var(--border); color: white; }
+.btn-close-white { filter: invert(1); }
+.chat-widget { background: var(--card-bg); border: 1px solid var(--border); }
