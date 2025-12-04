@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 async function seedProducts() {
-    console.log('🔧 REINICIANDO BASE DE DATOS (Modo Seguro)...');
+    console.log('🔧 ACTUALIZANDO ESTRUCTURA DB (Stock Bancario y Seguridad)...');
     
     const connection = await mysql.createConnection({
         host: process.env.DB_HOST,
@@ -15,28 +15,86 @@ async function seedProducts() {
     });
 
     try {
-        // 1. Limpiar Tablas
+        // 1. Limpieza segura
         await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
         const tables = ['reservations', 'promotions', 'reviews', 'order_items', 'orders', 'products', 'users'];
         for (const t of tables) await connection.execute(`DROP TABLE IF EXISTS ${t}`);
         await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
 
-        // 2. Crear Estructura
-        await connection.execute(`CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), email VARCHAR(255) UNIQUE, password VARCHAR(255), phone VARCHAR(50), role VARCHAR(20) DEFAULT 'client', is_verified BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-        await connection.execute(`CREATE TABLE products (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), description TEXT, base_price DECIMAL(10,2), price DECIMAL(10,2), stock INT, category VARCHAR(50), image_url VARCHAR(500), model_url VARCHAR(500), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
-        await connection.execute(`CREATE TABLE reservations (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, product_id INT, quantity INT, status ENUM('active', 'purchased') DEFAULT 'active', expires_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE)`);
-        await connection.execute(`CREATE TABLE promotions (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), discount_percent DECIMAL(5,2), is_active BOOLEAN DEFAULT FALSE)`);
-        await connection.execute(`CREATE TABLE reviews (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, product_id INT, rating INT, comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
+        // 2. CREACIÓN DE TABLAS (Lógica Reforzada)
+        
+        // Usuarios: Con bloqueo de seguridad
+        await connection.execute(`
+            CREATE TABLE users (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                name VARCHAR(255), 
+                email VARCHAR(255) UNIQUE, 
+                password VARCHAR(255), 
+                phone VARCHAR(50), 
+                role VARCHAR(20) DEFAULT 'client',
+                is_verified BOOLEAN DEFAULT FALSE,
+                failed_attempts INT DEFAULT 0,
+                lock_until TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // Productos: Con precio base para descuentos reales
+        await connection.execute(`
+            CREATE TABLE products (
+                id INT AUTO_INCREMENT PRIMARY KEY, 
+                name VARCHAR(255), 
+                description TEXT, 
+                base_price DECIMAL(10,2), -- Precio original
+                price DECIMAL(10,2),      -- Precio de venta actual
+                stock INT, 
+                category VARCHAR(50), 
+                image_url VARCHAR(500), 
+                model_url VARCHAR(500), 
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        // NUEVO: Tabla de Reservas (Para el Carrito Real)
+        await connection.execute(`
+            CREATE TABLE reservations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_id INT,
+                quantity INT,
+                status ENUM('active', 'purchased', 'expired') DEFAULT 'active',
+                expires_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            )
+        `);
+
+        // NUEVO: Tabla de Promociones (Venta Nocturna)
+        await connection.execute(`
+            CREATE TABLE promotions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100),
+                discount_percent DECIMAL(5,2),
+                is_active BOOLEAN DEFAULT FALSE
+            )
+        `);
+
+        // Tablas auxiliares
+        await connection.execute(`CREATE TABLE reviews (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, product_id INT, rating INT, comment TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE)`);
         await connection.execute(`CREATE TABLE orders (id INT AUTO_INCREMENT PRIMARY KEY, user_email VARCHAR(255), total DECIMAL(10,2), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`);
         await connection.execute(`CREATE TABLE order_items (id INT AUTO_INCREMENT PRIMARY KEY, order_id INT, product_name VARCHAR(255), quantity INT, price DECIMAL(10,2))`);
 
-        // 3. Insertar Admin
+        // 3. DATOS INICIALES
         const pass = await bcrypt.hash('admin123', 10);
         await connection.execute(`INSERT INTO users (name, email, password, phone, role, is_verified) VALUES (?, ?, ?, ?, ?, ?)`, ['Admin', 'jsusgamep@itc.edu.co', pass, '3222625352', 'admin', true]);
+        
+        // Inicializar Venta Nocturna (Apagada)
         await connection.execute(`INSERT INTO promotions (name, discount_percent, is_active) VALUES ('Venta Nocturna', 0.20, 0)`);
 
-        // 4. Autos (SINTAXIS CORREGIDA)
-        const misAutos = [
+        // -----------------------------------------------------------------------
+        // 📝 TUS AUTOS (Mantenidos intactos)
+    const misAutos = [
         {
             name: 'Chevrolet Corvette 1957',
             description: 'El Oldsmobile Starfire 98 Convertible del 57 destaca por su elegancia clásica con líneas cromadas brillantes, capota convertible para una experiencia vintage inolvidable, un motor V8 potente, interior de cuero amplio y lujoso, y un nivel de exclusividad que lo convierte en una pieza de colección altamente deseada.',
@@ -370,14 +428,17 @@ async function seedProducts() {
     }
     ];
 
- for (const auto of misAutos) {
+     console.log(`📦 Insertando ${misAutos.length} autos...`);
+        
+        for (const auto of misAutos) {
+            // Insertamos precio en base_price y price iguales al inicio
             await connection.execute(
                 'INSERT INTO products (name, description, base_price, price, stock, category, image_url, model_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', 
                 [auto.name, auto.description, auto.price, auto.price, auto.stock, auto.category, auto.image_url, auto.model_url]
             );
         }
 
-        console.log(`✅ ${misAutos.length} autos insertados. DB LISTA.`);
+        console.log('✅ BASE DE DATOS ACTUALIZADA CON SEGURIDAD.');
 
     } catch (error) {
         console.error('❌ Error:', error);
