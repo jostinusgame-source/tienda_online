@@ -1,12 +1,12 @@
 /**
- * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V6)
- * Correcciones: Reseñas en tiempo real y Catálogo estable.
+ * SPEEDCOLLECT | SCRIPT MAESTRO (FINAL V3)
+ * Fase 1: Stock Real, Paginación, 3D y Validaciones Bancarias
  */
 
-console.log("✅ Script Cargado Correctamente.");
+console.log("🚀 SpeedCollect System Online");
 
 const API_URL = '/api'; 
-let allProducts = []; // Memoria global para que el modal encuentre los datos
+let allProducts = []; // Memoria global de productos cargados
 let currentProductModalId = null;
 let itiInstance = null; 
 let isOfferActive = false;
@@ -47,228 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (registerForm) initStrictRegister();
     if (loginForm) initLogin();
     
-    // Reseñas (Listener Global)
+    // Reseñas
     if (reviewForm) {
         reviewForm.addEventListener('submit', handleReviewSubmit);
     }
 });
 
 // ==========================================
-// 2. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
-// ==========================================
-
-// ABRIR CARRITO (CONECTADO A BASE DE DATOS)
-window.openPaymentModal = async function() {
-    console.log("Abriendo carrito...");
-    const token = localStorage.getItem('token');
-    
-    // Si no está logueado
-    if (!token) {
-        const loginModalEl = document.getElementById('loginRequiredModal');
-        if(loginModalEl && window.bootstrap) {
-            new bootstrap.Modal(loginModalEl).show();
-        } else {
-            if(confirm("Debes iniciar sesión para ver tu garaje. ¿Ir al login?")) {
-                window.location.href = 'login.html';
-            }
-        }
-        return;
-    }
-    
-    // Obtener datos reales del servidor
-    try {
-        const res = await fetch(`${API_URL}/store/cart`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!res.ok) {
-             if(res.status === 401) { window.logout(); return; }
-             throw new Error("Error al obtener carrito");
-        }
-        
-        const data = await res.json();
-        
-        // Variables globales para el PDF
-        window.currentCartItems = data.items;
-        window.currentCartTotal = data.total;
-
-        const list = document.getElementById('cart-items');
-        const totalEl = document.getElementById('cart-total');
-
-        if (list) {
-            if (data.items.length === 0) {
-                list.innerHTML = '<p class="text-center text-muted py-4">Tu garaje está vacío.</p>';
-            } else {
-                list.innerHTML = data.items.map(item => `
-                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
-                    <div>
-                        <span class="fw-bold text-white me-2">${item.quantity}x</span> 
-                        <span class="text-light">${item.name}</span>
-                    </div>
-                    <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
-                </div>`).join('');
-            }
-        }
-        
-        if (totalEl) {
-            totalEl.innerText = `$${parseFloat(data.total).toFixed(2)}`;
-        }
-        
-        const modalEl = document.getElementById('paymentModal');
-        if (modalEl && window.bootstrap) {
-            new bootstrap.Modal(modalEl).show();
-        }
-
-    } catch (e) {
-        console.error("Error carrito:", e);
-        alert("No se pudo sincronizar el garaje con el servidor.");
-    }
-};
-
-// AÑADIR AL CARRITO (RESERVA REAL)
-window.addToCart = async function(id) {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-        if (confirm("🔒 Acceso Restringido.\nDebes iniciar sesión para reservar stock. ¿Ir al login?")) {
-            window.location.href = 'login.html';
-        }
-        return;
-    }
-
-    try {
-        const res = await fetch(`${API_URL}/store/cart`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ productId: id, quantity: 1 })
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            alert(`✅ ${data.message}`);
-            updateCartUI(); 
-        } else {
-            alert(`⚠️ ${data.message}`);
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Error de conexión con el servidor.");
-    }
-};
-
-// CHECKOUT (PAGO Y PDF)
-window.checkout = async function() {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    if (!confirm("¿Confirmar compra y procesar factura?")) return;
-
-    try {
-        const res = await fetch(`${API_URL}/store/checkout`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        if (res.ok) {
-            if (typeof generatePDF === 'function') {
-                generatePDF(window.currentCartItems, data.total, data.orderId);
-            }
-            
-            alert("¡COMPRA EXITOSA! El auto es legalmente tuyo.");
-            updateCartUI();
-            
-            // Cerrar modal y recargar para ver stock actualizado
-            const modalEl = document.getElementById('paymentModal');
-            if (modalEl && window.bootstrap) {
-                bootstrap.Modal.getInstance(modalEl).hide();
-            }
-            loadCatalog(true); 
-        } else {
-            alert(`❌ Error: ${data.message}`);
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Error procesando la transacción.");
-    }
-};
-
-// MODAL DE DETALLE
-window.openModal = function(id) {
-    const p = allProducts.find(x => x.id === id);
-    if (!p) return;
-    
-    currentProductModalId = id;
-    
-    let price = parseFloat(p.price);
-    let htmlPrice = `<span class="text-danger fw-bold fs-2">$${price.toLocaleString()}</span>`;
-    
-    if (p.discount) {
-        htmlPrice = `
-            <div class="d-flex flex-column">
-                <span class="text-decoration-line-through text-muted small">$${parseFloat(p.base_price).toLocaleString()}</span>
-                <span class="text-success fw-bold fs-2">$${price.toLocaleString()}</span>
-            </div>`;
-    }
-
-    document.getElementById('modal-p-name').innerText = p.name;
-    document.getElementById('modal-p-desc').innerText = p.description;
-    document.getElementById('modal-p-price').innerHTML = htmlPrice;
-    
-    const stockEl = document.getElementById('modal-p-stock');
-    if(stockEl) {
-        stockEl.innerHTML = p.stock > 0 
-        ? `<span class="text-success">Disponible: ${p.stock}</span>` 
-        : '<span class="text-danger">Agotado</span>';
-    }
-
-    // 3D o Imagen
-    const visualContainer = document.getElementById('visual-container');
-    if (visualContainer) {
-        if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf'))) {
-            visualContainer.innerHTML = `
-                <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
-                    <model-viewer 
-                        src="${p.model_url}" 
-                        alt="${p.name}" 
-                        auto-rotate 
-                        camera-controls 
-                        shadow-intensity="1"
-                        style="width: 100%; height: 100%; background-color: #151515;"
-                    ></model-viewer>
-                    <div class="position-absolute bottom-0 w-100 text-center text-white-50 small py-1" style="background:rgba(0,0,0,0.6)">
-                        <i class="fa-solid fa-hand-pointer"></i> Arrastra para rotar 360°
-                    </div>
-                </div>`;
-        } else {
-            const img = p.image_url || 'https://via.placeholder.com/800x600?text=No+Image';
-            visualContainer.innerHTML = `
-                <img src="${img}" class="img-fluid rounded border border-secondary w-100 shadow" 
-                     style="max-height: 400px; object-fit: cover;">`;
-        }
-    }
-    
-    // Cargar reseñas
-    loadReviews(id);
-    
-    const modalEl = document.getElementById('productModal');
-    if (modalEl && window.bootstrap) {
-        new bootstrap.Modal(modalEl).show();
-    }
-};
-
-window.logout = function() {
-    localStorage.clear();
-    window.location.href = 'index.html';
-};
-
-// ==========================================
-// 3. CATÁLOGO INTELIGENTE
+// 2. CATÁLOGO INTELIGENTE (Paginación y Filtros)
 // ==========================================
 
 function setupStoreListeners() {
@@ -401,7 +187,7 @@ async function loadCatalog(reset = false) {
 function renderProducts(products) {
     const container = document.getElementById('products-container');
     if(!container) return;
-
+    
     const html = products.map(p => {
         const isOut = p.stock <= 0;
         const img = p.image_url || 'https://via.placeholder.com/400';
@@ -410,7 +196,7 @@ function renderProducts(products) {
         let price = parseFloat(p.price);
         let priceHtml = `<span class="fs-4 fw-bold text-white">$${price.toLocaleString()}</span>`;
 
-        if (p.discount) { 
+        if (p.discount) { // Viene del backend si hay venta nocturna activa
             priceHtml = `
                 <div class="d-flex flex-column align-items-start">
                     <span class="old-price small">$${parseFloat(p.base_price).toLocaleString()}</span>
@@ -418,19 +204,16 @@ function renderProducts(products) {
                 </div>`;
         }
 
-        const badge3D = p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-black border border-secondary text-white px-2">3D</div>' : '';
-        const overlay = isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : '';
-
         return `
         <div class="col-md-6 col-lg-4 mb-4 animate__animated animate__fadeIn">
             <div class="card custom-card h-100 shadow product-card" onclick="openModal(${p.id})">
                 <div class="position-relative overflow-hidden" style="height: 250px;">
                     <img src="${img}" class="w-100 h-100 object-fit-cover" alt="${p.name}">
                     <div class="badge bg-danger position-absolute top-0 end-0 m-3 shadow">${p.category}</div>
-                    ${badge3D}
-                    ${overlay}
+                    ${p.model_url ? '<div class="position-absolute bottom-0 end-0 m-2 badge bg-dark border border-white"><i class="fa-solid fa-cube"></i> 3D</div>' : ''}
+                    ${isOut ? '<div class="overlay-sold d-flex align-items-center justify-content-center"><span>AGOTADO</span></div>' : ''}
                 </div>
-                <div class="card-body bg-black text-white">
+                <div class="card-body d-flex flex-column bg-black text-white">
                     <h5 class="fw-bold text-uppercase mb-1 text-truncate brand-font" style="font-size:1rem">${p.name}</h5>
                     <small class="text-silver mb-3 text-truncate">${p.description || 'Sin descripción'}</small>
                     <div class="mt-auto d-flex justify-content-between align-items-center border-top border-secondary pt-3">
@@ -450,7 +233,216 @@ function renderProducts(products) {
 }
 
 // ==========================================
-// 4. UTILIDADES (PDF, AUTH, ETC)
+// 3. FUNCIONES GLOBALES (ASIGNACIÓN DIRECTA)
+// ==========================================
+
+window.openPaymentModal = async function() {
+    console.log("Abriendo carrito...");
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+        const loginModalEl = document.getElementById('loginRequiredModal');
+        if(loginModalEl && window.bootstrap) {
+            new bootstrap.Modal(loginModalEl).show();
+        } else {
+            if(confirm("Debes iniciar sesión para ver tu garaje. ¿Ir al login?")) {
+                window.location.href = 'login.html';
+            }
+        }
+        return;
+    }
+    
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+            if(res.status === 401) { window.logout(); return; }
+            throw new Error("Error al obtener carrito");
+        }
+        
+        const data = await res.json();
+        
+        // Variables globales para el PDF
+        window.currentCartItems = data.items;
+        window.currentCartTotal = data.total;
+
+        const list = document.getElementById('cart-items');
+        const totalEl = document.getElementById('cart-total');
+
+        if (list) {
+            if (data.items.length === 0) {
+                list.innerHTML = '<p class="text-center text-muted py-4">Tu garaje está vacío.</p>';
+            } else {
+                list.innerHTML = data.items.map(item => `
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
+                    <div>
+                        <span class="fw-bold text-white me-2">${item.quantity}x</span> 
+                        <span class="text-light">${item.name}</span>
+                    </div>
+                    <span class="text-success fw-bold">$${(parseFloat(item.price) * item.quantity).toLocaleString()}</span>
+                </div>`).join('');
+            }
+        }
+        
+        if (totalEl) {
+            totalEl.innerText = `$${parseFloat(data.total).toLocaleString()}`;
+        }
+        
+        const modalEl = document.getElementById('paymentModal');
+        if (modalEl && window.bootstrap) {
+            new bootstrap.Modal(modalEl).show();
+        }
+
+    } catch (e) {
+        console.error("Error carrito:", e);
+        alert("No se pudo sincronizar el garaje con el servidor.");
+    }
+};
+
+window.addToCart = async function(id) {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+        if (confirm("🔒 Acceso Restringido.\nDebes iniciar sesión para reservar stock. ¿Ir al login?")) {
+            window.location.href = 'login.html';
+        }
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API_URL}/store/cart`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ productId: id, quantity: 1 })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(`✅ ${data.message}`);
+            updateCartUI(); 
+        } else {
+            alert(`⚠️ ${data.message}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error de conexión con el servidor.");
+    }
+};
+
+window.openModal = function(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    
+    currentProductModalId = id;
+    
+    let price = parseFloat(p.price);
+    let htmlPrice = `<span class="text-danger fw-bold fs-2">$${price.toLocaleString()}</span>`;
+    
+    if (p.discount) {
+        htmlPrice = `
+            <div class="d-flex flex-column">
+                <span class="text-decoration-line-through text-muted small">$${parseFloat(p.base_price).toLocaleString()}</span>
+                <span class="text-success fw-bold fs-2">$${price.toLocaleString()}</span>
+            </div>`;
+    }
+
+    const elName = document.getElementById('modal-p-name');
+    const elDesc = document.getElementById('modal-p-desc');
+    const elPrice = document.getElementById('modal-p-price');
+    const elStock = document.getElementById('modal-p-stock');
+
+    if (elName) elName.innerText = p.name;
+    if (elDesc) elDesc.innerText = p.description;
+    if (elPrice) elPrice.innerHTML = htmlPrice;
+    if (elStock) elStock.innerHTML = p.stock > 0 
+        ? `<span class="text-success">Disponible: ${p.stock}</span>` 
+        : '<span class="text-danger">Agotado</span>';
+
+    // 3D o Imagen
+    const visualContainer = document.getElementById('visual-container');
+    if (visualContainer) {
+        // Prioridad: Archivo GLB
+        if (p.model_url && (p.model_url.endsWith('.glb') || p.model_url.endsWith('.gltf'))) {
+            visualContainer.innerHTML = `
+                <div class="ratio ratio-16x9 bg-black border border-secondary rounded overflow-hidden shadow">
+                    <model-viewer 
+                        src="${p.model_url}" 
+                        alt="${p.name}" 
+                        auto-rotate 
+                        camera-controls 
+                        shadow-intensity="1"
+                        style="width: 100%; height: 100%; background-color: #151515;"
+                    ></model-viewer>
+                    <div class="position-absolute bottom-0 w-100 text-center text-white-50 small py-1" style="background:rgba(0,0,0,0.6)">
+                        <i class="fa-solid fa-hand-pointer"></i> Arrastra para rotar 360°
+                    </div>
+                </div>`;
+        } else {
+            const img = p.image_url || 'https://via.placeholder.com/800x600?text=No+Image';
+            visualContainer.innerHTML = `
+                <img src="${img}" class="img-fluid rounded border border-secondary w-100 shadow" 
+                     style="max-height: 400px; object-fit: cover;">`;
+        }
+    }
+    
+    if (typeof loadReviews === 'function') loadReviews(id);
+    
+    const modalEl = document.getElementById('productModal');
+    if (modalEl && window.bootstrap) {
+        new bootstrap.Modal(modalEl).show();
+    }
+};
+
+window.checkout = async function() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    if (!confirm("¿Confirmar compra y procesar factura?")) return;
+
+    try {
+        const res = await fetch(`${API_URL}/store/checkout`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            if (typeof generatePDF === 'function') {
+                generatePDF(window.currentCartItems, data.total, data.orderId);
+            }
+            
+            alert("¡COMPRA EXITOSA! El auto es legalmente tuyo.");
+            updateCartUI();
+            
+            const modalEl = document.getElementById('paymentModal');
+            if (modalEl && window.bootstrap) {
+                bootstrap.Modal.getInstance(modalEl).hide();
+            }
+            
+            loadCatalog(true); // Actualizar stock visual
+        } else {
+            alert(`❌ Error: ${data.message}`);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error procesando la transacción.");
+    }
+};
+
+window.logout = function() {
+    localStorage.clear();
+    window.location.href = 'index.html';
+};
+
+// ==========================================
+// 4. UTILIDADES Y AUTH
 // ==========================================
 
 async function updateCartUI() {
@@ -522,14 +514,15 @@ function generatePDF(items, total, orderId) {
     doc.setFont(undefined, 'bold');
     doc.text(`TOTAL: $${parseFloat(total).toLocaleString()}`, 130, y+20);
     
-    doc.save(`Factura_${id}.pdf`);
+    doc.save(`Factura_${orderId}.pdf`);
 }
 
 function startCountdown() {
     let t = 600;
-    setInterval(() => {
+    const interval = setInterval(() => {
         if (t <= 0) {
             if (!isOfferActive) activateNightSale();
+            clearInterval(interval);
             return;
         }
         t--;
@@ -560,20 +553,31 @@ async function activateNightSale() {
 }
 
 function initChatbot() { 
-    const t = document.getElementById('chatTrigger'), w = document.getElementById('chatWidget'), c = document.getElementById('closeChat'), s = document.getElementById('sendChat'), i = document.getElementById('chatInput'), b = document.getElementById('chatBody');
-    if(!t) return;
+    const t = document.getElementById('chatTrigger');
+    const w = document.getElementById('chatWidget');
+    const c = document.getElementById('closeChat');
+    const s = document.getElementById('sendChat');
+    const i = document.getElementById('chatInput');
+    const b = document.getElementById('chatBody');
+
+    if (!t || !w) return;
+
     t.onclick = () => { w.style.display = 'flex'; t.style.display = 'none'; };
     c.onclick = () => { w.style.display = 'none'; t.style.display = 'flex'; };
+
     const send = () => {
         if (!i.value.trim()) return;
-        b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${i.value}</span></div>`;
+        const msg = i.value;
+        b.innerHTML += `<div class="mb-2 text-end"><span class="bg-danger text-white p-2 rounded">${msg}</span></div>`;
         i.value = '';
         b.scrollTop = b.scrollHeight;
+        
         setTimeout(() => {
             b.innerHTML += `<div class="mb-2"><span class="bg-secondary text-white p-2 rounded">Para soporte técnico, usa el WhatsApp.</span></div>`;
             b.scrollTop = b.scrollHeight;
         }, 1000);
     };
+
     if(s) s.onclick = send;
     if(i) i.onkeypress = (e) => { if (e.key === 'Enter') send(); };
 }
@@ -594,6 +598,7 @@ function initStrictRegister() {
         f.addEventListener('submit', async e => {
             e.preventDefault();
             const pass = document.getElementById('reg-pass').value;
+            const msg = document.getElementById('global-msg') || document.createElement('div');
             if (pass.length < 8) return alert("Contraseña insegura (min 8 chars)");
             
             try {
@@ -646,65 +651,29 @@ function initLogin() {
     }
 }
 
-// ==========================
-// 5. RESEÑAS EN TIEMPO REAL
-// ==========================
 async function loadReviews(pid) {
     const c = document.getElementById('reviewsContainer');
     if (c) {
-        c.innerHTML = '<small class="text-muted">Cargando...</small>'; // Feedback de carga
         try {
             const res = await fetch(`${API_URL}/products/${pid}/reviews`);
             const d = await res.json();
-            
-            if(d.length === 0) {
-                c.innerHTML = '<small class="text-muted">Sé el primero en opinar.</small>';
-            } else {
-                c.innerHTML = d.map(r => `
-                    <div class="small mb-2 text-white border-bottom border-secondary pb-1">
-                        <strong class="text-danger">${r.user_name}</strong>: ${r.comment}
-                    </div>
-                `).join('');
-            }
-        } catch (e) { 
-            c.innerHTML = '<small class="text-danger">Error cargando reseñas.</small>'; 
-        }
+            c.innerHTML = d.length ? d.map(r => `<div class="small mb-2 text-white border-bottom border-secondary pb-1"><strong>${r.user_name}</strong>: ${r.comment}</div>`).join('') : '<small class="text-muted">Sin reseñas.</small>';
+        } catch (e) { c.innerHTML = '<small class="text-danger">Error cargando.</small>'; }
     }
 }
 
 async function handleReviewSubmit(e) {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    
-    if (!token) return alert("Inicia sesión para comentar.");
-    
-    const txtInput = document.getElementById('review-comment');
-    const txt = txtInput.value.trim();
-    if (!txt) return alert("Escribe un comentario.");
+    if (!token) return alert("Inicia sesión.");
+    const txt = document.getElementById('review-comment').value;
+    if (!txt) return;
 
-    try {
-        const res = await fetch(`${API_URL}/reviews`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'Authorization': `Bearer ${token}` 
-            },
-            body: JSON.stringify({ 
-                productId: currentProductModalId, 
-                rating: 5, 
-                comment: txt 
-            })
-        });
-
-        if(res.ok) {
-            // Recargar reseñas inmediatamente para que aparezca la nueva
-            loadReviews(currentProductModalId);
-            txtInput.value = ''; // Limpiar campo
-        } else {
-            alert("Error al publicar reseña.");
-        }
-    } catch(err) {
-        console.error(err);
-        alert("Error de conexión.");
-    }
+    await fetch(`${API_URL}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ productId: currentProductModalId, rating: 5, comment: txt })
+    });
+    loadReviews(currentProductModalId);
+    document.getElementById('review-comment').value = '';
 }
